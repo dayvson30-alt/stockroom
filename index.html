@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>StockRoom</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#f3f6f5;--card:#fff;--ink:#10201d;--muted:#5d6d69;--line:#dfe7e4;
+  --brand:#0f766e;--brand-ink:#fff;--soft:#e6f4f1;--ok:#15803d;--okbg:#dcfce7;--warn:#a16207;--warnbg:#fef3c7;--err:#b91c1c;
+  --r:14px;--shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1312;--card:#152120;--ink:#e7f0ee;--muted:#93a6a1;--line:#24332f;
+  --brand:#14b8a6;--brand-ink:#04211d;--soft:#13302c;--ok:#4ade80;--okbg:#12301f;--warn:#fbbf24;--warnbg:#3a2d0b;--err:#f87171;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);display:grid;place-items:center;flex:none}
+.brand b{display:block;font-size:17px}
+.brand small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-r{display:flex;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+select.chip{padding:6px 8px}
+main{max-width:720px;margin:0 auto;padding:16px 16px 40px}
+.hero{display:grid;gap:10px}
+.big{width:100%;border:0;border-radius:var(--r);background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:18px;padding:18px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;gap:10px}
+.big:disabled{opacity:.6}
+.ghost{width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--card);padding:14px;font-weight:600;cursor:pointer}
+.ghost.sm{width:auto;padding:10px 14px;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.stat b{display:block;font-size:22px}
+.stat span{font-size:12px;color:var(--muted)}
+.listhead{display:flex;gap:8px;margin-bottom:10px}
+input[type=search],.sheet-body input,.sheet-body select,.sheet-body textarea,.manual input{
+  width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--brand)}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px;cursor:pointer}
+.thumb{width:56px;height:56px;border-radius:10px;background:var(--soft);flex:none;display:grid;place-items:center;font-size:26px;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.item .t{min-width:0;flex:1}
+.item .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tags{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.tag.warn{background:var(--warnbg);color:var(--warn)}
+.empty{text-align:center;color:var(--muted);padding:32px 12px}
+.overlay{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column}
+#scanView{background:#000;color:#fff}
+.scan-top,.sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px}
+.sheet-top{border-bottom:1px solid var(--line)}
+.x{border:0;background:rgba(127,127,127,.18);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;color:inherit;flex:none}
+#reader{width:100%;max-width:560px;margin:auto 0;align-self:center}
+#reader video{border-radius:12px}
+.manual{display:flex;gap:8px;padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) 16px}
+.manual input{background:#111;border-color:#333;color:#fff}
+.manual button{border:0;border-radius:12px;background:#14b8a6;color:#04211d;font-weight:700;padding:0 18px}
+.sheet-body{flex:1;overflow:auto;padding:16px 16px calc(24px + env(safe-area-inset-bottom));max-width:720px;width:100%;margin:0 auto;display:grid;gap:14px;align-content:start}
+.sheet-body label,.field{display:grid;gap:6px}
+.sheet-body label>span,.field>span{font-size:13px;font-weight:600;color:var(--muted)}
+.codebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.codebox span:first-child{font-size:12px;color:var(--muted)}
+.codebox b{font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px}
+.pill{margin-left:auto;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--soft)}
+.pill.ok{background:var(--okbg);color:var(--ok)}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.photo{position:relative;display:grid!important;place-items:center;min-height:170px;border:2px dashed var(--line);border-radius:var(--r);background:var(--card);cursor:pointer;overflow:hidden}
+.photo img{width:100%;max-height:260px;object-fit:contain;display:none}
+.photo.has img{display:block}
+.photo.has #photoHint{position:absolute;bottom:8px;right:8px;font-size:12px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:999px}
+#photoHint{font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-size:14px;cursor:pointer}
+.chips button.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-weight:600}
+.seg{display:grid;gap:8px}
+.seg button{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer}
+.seg button b{display:block;font-size:15px}
+.seg button small{color:var(--muted);font-size:12px}
+.seg button.on{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand);background:var(--soft)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:grid;gap:8px}
+.meta{font-size:12px;color:var(--muted);text-align:center;margin:0}
+.err{color:var(--err);font-size:14px;min-height:1em;margin:0}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;z-index:50;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;transition:.2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+.banner{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 6v12M7.5 6v12M11 6v12M15 6v12M18 6v12M20.5 6v12"/></svg></div>
+    <div><b>StockRoom</b><small id="mode"></small></div>
+  </div>
+  <div class="top-r">
+    <select id="lang" class="chip" aria-label="Idioma"><option value="pt">PT</option><option value="en">EN</option><option value="es">ES</option></select>
+    <button id="who" class="chip"></button>
+  </div>
+</header>
+
+<main>
+  <div id="demoBanner" class="banner hidden" data-t="demoBanner"></div>
+  <section class="hero">
+    <button id="btnScan" class="big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M14 8v8M17 8v8"/></svg><span data-t="scan"></span></button>
+    <button id="btnNoCode" class="ghost" data-t="nocode"></button>
+  </section>
+  <section class="stats" id="stats"></section>
+  <section class="listhead">
+    <input id="q" type="search" data-tp="search" autocomplete="off">
+    <button id="btnCsv" class="ghost sm">CSV</button>
+  </section>
+  <ul id="list" class="list"></ul>
+</main>
+
+<div id="scanView" class="overlay hidden">
+  <div class="scan-top"><b data-t="aim"></b><button class="x" data-close>✕</button></div>
+  <div id="reader"></div>
+  <form id="manualForm" class="manual" autocomplete="off">
+    <input id="manualCode" inputmode="numeric" data-tp="typecode">
+    <button type="submit">OK</button>
+  </form>
+</div>
+
+<div id="formView" class="overlay hidden">
+  <div class="sheet-top"><button class="x" data-close type="button">✕</button><b id="formTitle"></b><span style="width:40px"></span></div>
+  <form id="itemForm" class="sheet-body" autocomplete="off" novalidate>
+    <div class="codebox"><span data-t="code"></span><b id="fCode"></b><span id="pill" class="pill"></span></div>
+    <label class="photo" id="photoBox">
+      <input type="file" accept="image/*" capture="environment" id="fPhoto" hidden>
+      <img id="photoPrev" alt="">
+      <span id="photoHint"></span>
+    </label>
+    <label><span data-t="name"></span><input id="fName" maxlength="200"></label>
+    <label><span data-t="brand"></span><input id="fBrand" maxlength="100"></label>
+    <div class="field"><span data-t="category"></span><div id="fCat" class="chips"></div></div>
+    <div class="field"><span data-t="control"></span><div id="fCtl" class="seg"></div></div>
+    <div class="row2">
+      <label><span data-t="unit"></span><select id="fUnit"></select></label>
+      <label><span data-t="qty"></span><input id="fQty" type="number" min="0" step="1" inputmode="numeric" data-tp="optional"></label>
+    </div>
+    <label><span data-t="where"></span><input id="fWhere" data-tp="whereEx" maxlength="100"></label>
+    <label><span data-t="notes"></span><textarea id="fNotes" rows="2" maxlength="300"></textarea></label>
+    <p id="formErr" class="err"></p>
+    <div class="btns">
+      <button class="big" id="btnSaveNext" type="submit" data-t="saveNext"></button>
+      <button class="ghost" id="btnSave" type="button" data-t="save"></button>
+    </div>
+    <p class="meta" id="fMeta"></p>
+  </form>
+</div>
+
+<div id="setupView" class="overlay hidden">
+  <div class="sheet-top"><span style="width:40px"></span><b>StockRoom</b><span style="width:40px"></span></div>
+  <form id="setupForm" class="sheet-body" autocomplete="off">
+    <p data-t="welcome" style="margin:0"></p>
+    <label><span data-t="yourName"></span><input id="sName" maxlength="60" required></label>
+    <label id="sKeyWrap"><span data-t="teamCode"></span><input id="sKey" inputmode="numeric" maxlength="20"></label>
+    <p id="setupErr" class="err"></p>
+    <button class="big" type="submit" data-t="start"></button>
+  </form>
+</div>
+
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const API = (window.STOCKROOM_API || '').trim();
+const $ = id => document.getElementById(id);
+
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('sr_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('sr_' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+
+const CATS = [
+  ['limpeza', '🧴', 'consumivel'], ['descartaveis', '🧻', 'consumivel'], ['amenities', '🧼', 'consumivel'],
+  ['bebidas', '🥤', 'consumivel'], ['enxoval', '🛏️', 'circula'], ['cozinha', '🍳', 'patrimonio'],
+  ['equipamento', '🧹', 'patrimonio'], ['casa', '🛋️', 'patrimonio'], ['escritorio', '📎', 'consumivel'],
+  ['outros', '📦', 'consumivel']
+];
+const CTLS = ['consumivel', 'circula', 'patrimonio'];
+const UNITS = ['un', 'cx', 'fardo', 'galao', 'rolo', 'par', 'jogo', 'pacote'];
+
+const I18N = {
+  pt: {
+    scan: 'Escanear código', nocode: 'Item sem código de barras', search: 'Buscar por nome, marca, código…',
+    aim: 'Aponte para o código de barras', typecode: 'ou digite o código', code: 'Código',
+    photoAdd: '📷 Tirar foto do produto', photoChange: 'Trocar foto', name: 'Nome do produto *', brand: 'Marca',
+    category: 'Categoria *', control: 'Tipo de controle', unit: 'Unidade', qty: 'Quantidade', optional: 'opcional',
+    where: 'Local / prateleira', whereEx: 'ex.: Prateleira A3', notes: 'Observação', save: 'Salvar',
+    saveNext: 'Salvar e escanear próximo', saving: 'Salvando…', saved: 'Salvo ✓', newItem: 'Novo produto',
+    editItem: 'Editar produto', already: 'Já cadastrado', looking: 'Buscando…', found: 'Achado', notFound: 'Não achado — preencha',
+    internal: 'Código interno', needName: 'Preencha o nome do produto.', needCat: 'Escolha uma categoria.',
+    demo: 'Modo demonstração', online: 'Online · planilha', items: 'cadastrados', withPhoto: 'com foto', noQty: 'sem contagem',
+    empty: 'Nenhum produto ainda. Toque em “Escanear código” para começar.', noMatch: 'Nada encontrado.',
+    camErr: 'Não consegui abrir a câmera. Permita o acesso ou digite o código.',
+    welcome: 'Cadastro de produtos do estoque. Escaneie, tire a foto e salve.',
+    yourName: 'Seu nome', teamCode: 'Código da equipe', start: 'Começar', badKey: 'Código da equipe inválido.',
+    netErr: 'Sem conexão com a planilha. Tente de novo.', by: 'Cadastrado por', upd: 'atualizado',
+    demoBanner: 'Modo demonstração: os dados ficam salvos só neste celular.', storageFull: 'Memória do celular cheia — exporte o CSV.',
+    ctl_consumivel: 'Consumível', ctlh_consumivel: 'Sai e acaba (químicos, papel, água)',
+    ctl_circula: 'Circula', ctlh_circula: 'Vai e volta da lavanderia (lençol, toalha)',
+    ctl_patrimonio: 'Patrimônio', ctlh_patrimonio: 'Vai para uma casa (panela, mop, vassoura)',
+    cat_limpeza: 'Limpeza', cat_descartaveis: 'Papel/descartáveis', cat_amenities: 'Amenities', cat_bebidas: 'Bebidas/alimentos',
+    cat_enxoval: 'Enxoval', cat_cozinha: 'Cozinha', cat_equipamento: 'Equipamentos', cat_casa: 'Itens da casa',
+    cat_escritorio: 'Escritório', cat_outros: 'Outros',
+    u_un: 'Unidade', u_cx: 'Caixa', u_fardo: 'Fardo', u_galao: 'Galão', u_rolo: 'Rolo', u_par: 'Par', u_jogo: 'Jogo', u_pacote: 'Pacote'
+  },
+  en: {
+    scan: 'Scan barcode', nocode: 'Item without barcode', search: 'Search name, brand, code…',
+    aim: 'Point at the barcode', typecode: 'or type the code', code: 'Code',
+    photoAdd: '📷 Take product photo', photoChange: 'Change photo', name: 'Product name *', brand: 'Brand',
+    category: 'Category *', control: 'Tracking type', unit: 'Unit', qty: 'Quantity', optional: 'optional',
+    where: 'Location / shelf', whereEx: 'e.g. Shelf A3', notes: 'Notes', save: 'Save',
+    saveNext: 'Save & scan next', saving: 'Saving…', saved: 'Saved ✓', newItem: 'New product',
+    editItem: 'Edit product', already: 'Already registered', looking: 'Searching…', found: 'Found', notFound: 'Not found — fill in',
+    internal: 'Internal code', needName: 'Enter the product name.', needCat: 'Pick a category.',
+    demo: 'Demo mode', online: 'Online · sheet', items: 'registered', withPhoto: 'with photo', noQty: 'not counted',
+    empty: 'No products yet. Tap “Scan barcode” to start.', noMatch: 'Nothing found.',
+    camErr: 'Could not open the camera. Allow access or type the code.',
+    welcome: 'Stock room product registry. Scan, snap a photo, save.',
+    yourName: 'Your name', teamCode: 'Team code', start: 'Start', badKey: 'Invalid team code.',
+    netErr: 'Could not reach the sheet. Try again.', by: 'Added by', upd: 'updated',
+    demoBanner: 'Demo mode: data is saved on this phone only.', storageFull: 'Phone storage full — export the CSV.',
+    ctl_consumivel: 'Consumable', ctlh_consumivel: 'Used up (chemicals, paper, water)',
+    ctl_circula: 'Rotating', ctlh_circula: 'Goes to laundry and back (sheets, towels)',
+    ctl_patrimonio: 'Asset', ctlh_patrimonio: 'Assigned to a house (pots, mop, broom)',
+    cat_limpeza: 'Cleaning', cat_descartaveis: 'Paper/disposables', cat_amenities: 'Amenities', cat_bebidas: 'Drinks/food',
+    cat_enxoval: 'Linens', cat_cozinha: 'Kitchen', cat_equipamento: 'Equipment', cat_casa: 'Home items',
+    cat_escritorio: 'Office', cat_outros: 'Other',
+    u_un: 'Each', u_cx: 'Box', u_fardo: 'Case', u_galao: 'Gallon', u_rolo: 'Roll', u_par: 'Pair', u_jogo: 'Set', u_pacote: 'Pack'
+  },
+  es: {
+    scan: 'Escanear código', nocode: 'Artículo sin código de barras', search: 'Buscar nombre, marca, código…',
+    aim: 'Apunta al código de barras', typecode: 'o escribe el código', code: 'Código',
+    photoAdd: '📷 Tomar foto del producto', photoChange: 'Cambiar foto', name: 'Nombre del producto *', brand: 'Marca',
+    category: 'Categoría *', control: 'Tipo de control', unit: 'Unidad', qty: 'Cantidad', optional: 'opcional',
+    where: 'Ubicación / estante', whereEx: 'ej.: Estante A3', notes: 'Nota', save: 'Guardar',
+    saveNext: 'Guardar y escanear otro', saving: 'Guardando…', saved: 'Guardado ✓', newItem: 'Nuevo producto',
+    editItem: 'Editar producto', already: 'Ya registrado', looking: 'Buscando…', found: 'Encontrado', notFound: 'No encontrado — completa',
+    internal: 'Código interno', needName: 'Escribe el nombre del producto.', needCat: 'Elige una categoría.',
+    demo: 'Modo demostración', online: 'En línea · hoja', items: 'registrados', withPhoto: 'con foto', noQty: 'sin conteo',
+    empty: 'Aún no hay productos. Toca “Escanear código” para empezar.', noMatch: 'No se encontró nada.',
+    camErr: 'No se pudo abrir la cámara. Permite el acceso o escribe el código.',
+    welcome: 'Registro de productos del almacén. Escanea, toma la foto y guarda.',
+    yourName: 'Tu nombre', teamCode: 'Código del equipo', start: 'Empezar', badKey: 'Código del equipo inválido.',
+    netErr: 'Sin conexión con la hoja. Intenta de nuevo.', by: 'Registrado por', upd: 'actualizado',
+    demoBanner: 'Modo demostración: los datos se guardan solo en este teléfono.', storageFull: 'Memoria llena — exporta el CSV.',
+    ctl_consumivel: 'Consumible', ctlh_consumivel: 'Se gasta (químicos, papel, agua)',
+    ctl_circula: 'Rotativo', ctlh_circula: 'Va y vuelve de la lavandería (sábanas, toallas)',
+    ctl_patrimonio: 'Activo', ctlh_patrimonio: 'Va a una casa (ollas, mop, escoba)',
+    cat_limpeza: 'Limpieza', cat_descartaveis: 'Papel/desechables', cat_amenities: 'Amenities', cat_bebidas: 'Bebidas/alimentos',
+    cat_enxoval: 'Ropa de cama', cat_cozinha: 'Cocina', cat_equipamento: 'Equipos', cat_casa: 'Artículos del hogar',
+    cat_escritorio: 'Oficina', cat_outros: 'Otros',
+    u_un: 'Unidad', u_cx: 'Caja', u_fardo: 'Paca', u_galao: 'Galón', u_rolo: 'Rollo', u_par: 'Par', u_jogo: 'Juego', u_pacote: 'Paquete'
+  }
+};
+
+const S = { lang: LS.get('lang', 'pt'), user: LS.get('user', ''), key: LS.get('key', ''), items: [], form: null };
+const t = k => (I18N[S.lang] && I18N[S.lang][k]) || I18N.pt[k] || k;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const catOf = id => CATS.find(c => c[0] === id);
+
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('on'), 2200);
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso); if (isNaN(d)) return iso || '';
+  return d.toLocaleDateString(S.lang === 'en' ? 'en-US' : S.lang === 'es' ? 'es-US' : 'pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' +
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function applyI18n() {
+  document.documentElement.lang = S.lang === 'pt' ? 'pt-BR' : S.lang;
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll('[data-tp]').forEach(el => { el.placeholder = t(el.dataset.tp); });
+  $('lang').value = S.lang;
+  $('mode').textContent = API ? t('online') : t('demo');
+  $('demoBanner').classList.toggle('hidden', !!API);
+  $('who').textContent = S.user || '—';
+  $('fUnit').innerHTML = UNITS.map(u => `<option value="${u}">${esc(t('u_' + u))}</option>`).join('');
+  if (S.form) { $('fUnit').value = S.form.unit; renderCats(); renderCtl(); renderPhoto(); }
+  render();
+}
+
+// ---------- dados ----------
+async function api(payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ key: S.key, user: S.user }, payload)) });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'error');
+  return j;
+}
+
+async function fetchJson(url, ms) {
+  const c = new AbortController(); const h = setTimeout(() => c.abort(), ms || 7000);
+  try { const r = await fetch(url, { signal: c.signal }); return r.ok ? await r.json() : null; }
+  catch (e) { return null; } finally { clearTimeout(h); }
+}
+
+// Modo demonstração: busca direto do navegador (no modo planilha quem busca é o Apps Script)
+async function publicLookup(code) {
+  const enc = encodeURIComponent(code);
+  const hosts = ['world.openfoodfacts.org', 'world.openproductsfacts.org', 'world.openbeautyfacts.org'];
+  const all = await Promise.all(hosts.map(h => fetchJson(`https://${h}/api/v2/product/${enc}.json?fields=product_name,brands,image_front_small_url`))
+    .concat([fetchJson(`https://api.upcitemdb.com/prod/trial/lookup?upc=${enc}`)]));
+  for (let i = 0; i < hosts.length; i++) {
+    const j = all[i];
+    if (j && j.status === 1 && j.product && j.product.product_name) {
+      return { name: j.product.product_name, brand: String(j.product.brands || '').split(',')[0].trim(), image: j.product.image_front_small_url || '', source: hosts[i].split('.')[1] };
+    }
+  }
+  const u = all[hosts.length];
+  if (u && u.items && u.items.length) return { name: u.items[0].title, brand: u.items[0].brand || '', image: (u.items[0].images || [])[0] || '', source: 'upcitemdb' };
+  return null;
+}
+
+async function loadItems() {
+  if (!API) { S.items = LS.get('items', []); render(); return; }
+  S.items = LS.get('cache', []); render();
+  try { S.items = (await api({ action: 'list' })).items; LS.set('cache', S.items); render(); }
+  catch (e) { handleErr(e); }
+}
+
+function handleErr(e) {
+  if (String(e.message) === 'bad_key') { openSetup(t('badKey')); return; }
+  toast(t('netErr'));
+}
+
+// ---------- lista ----------
+function render() {
+  const items = S.items.slice().sort((a, b) => String(b.atualizadoEm || '').localeCompare(String(a.atualizadoEm || '')));
+  const n = items.length, ph = items.filter(i => i.fotoUrl).length, nq = items.filter(i => i.quantidade === '' || i.quantidade == null).length;
+  $('stats').innerHTML = `<div class="stat"><b>${n}</b><span>${esc(t('items'))}</span></div>
+    <div class="stat"><b>${ph}</b><span>${esc(t('withPhoto'))}</span></div>
+    <div class="stat"><b>${nq}</b><span>${esc(t('noQty'))}</span></div>`;
+  const q = $('q').value.trim().toLowerCase();
+  const shown = q ? items.filter(i => [i.nome, i.marca, i.codigo, i.local].join(' ').toLowerCase().includes(q)) : items;
+  if (!shown.length) { $('list').innerHTML = `<li class="empty">${esc(t(n ? 'noMatch' : 'empty'))}</li>`; return; }
+  $('list').innerHTML = shown.map(i => {
+    const c = catOf(i.categoria);
+    const thumb = i.fotoUrl ? `<img src="${esc(i.fotoUrl)}" alt="" loading="lazy">` : (c ? c[1] : '📦');
+    const qty = i.quantidade !== '' && i.quantidade != null
+      ? `<span class="tag">${esc(i.quantidade)} ${esc(t('u_' + (i.unidade || 'un')))}</span>`
+      : `<span class="tag warn">${esc(t('noQty'))}</span>`;
+    return `<li class="item" data-code="${esc(i.codigo)}"><div class="thumb">${thumb}</div><div class="t">
+      <div class="n">${esc(i.nome)}</div><div class="s">${esc([i.marca, i.codigo, i.local].filter(Boolean).join(' · '))}</div>
+      <div class="tags">${c ? `<span class="tag">${esc(t('cat_' + c[0]))}</span>` : ''}${qty}</div></div></li>`;
+  }).join('');
+}
+
+function exportCsv() {
+  const cols = ['codigo', 'nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs', 'criadoPor', 'criadoEm', 'atualizadoEm'];
+  const cell = v => { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const csv = '﻿' + [cols.join(',')].concat(S.items.map(i => cols.map(c => cell(i[c])).join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'estoque-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---------- telas (com botão voltar do Android) ----------
+const stack = [];
+function openOv(el) { el.classList.remove('hidden'); stack.push(el); history.pushState({ ov: stack.length }, ''); }
+function swapOv(from, to) { // troca de tela sem mexer no histórico
+  from.classList.add('hidden'); if (from === $('scanView')) stopScanner();
+  stack[stack.lastIndexOf(from)] = to; to.classList.remove('hidden');
+}
+function closeTop(fromPop) {
+  const el = stack.pop(); if (!el) return;
+  el.classList.add('hidden');
+  if (el === $('scanView')) stopScanner();
+  if (el === $('formView')) S.form = null;
+  if (!fromPop) history.back();
+}
+window.addEventListener('popstate', () => { if (stack.length) closeTop(true); });
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeTop(false)));
+
+// ---------- scanner ----------
+let scanner = null, last = { code: '', at: 0 };
+
+function normalize(code) {
+  code = String(code).trim();
+  return /^0\d{12}$/.test(code) ? code.slice(1) : code; // EAN-13 com zero na frente = UPC-A
+}
+
+async function startScanner() {
+  $('manualCode').value = '';
+  last = { code: '', at: 0 };
+  if (!window.Html5Qrcode) { toast(t('camErr')); return; }
+  const F = window.Html5QrcodeSupportedFormats;
+  try {
+    scanner = new Html5Qrcode('reader', {
+      verbose: false,
+      formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE],
+      useBarCodeDetectorIfSupported: true,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    });
+    await scanner.start({ facingMode: 'environment' }, {
+      fps: 15,
+      qrbox: (w, h) => ({ width: Math.max(80, Math.floor(w * 0.85)), height: Math.max(80, Math.floor(Math.min(h * 0.5, w * 0.45))) })
+    }, onRead, () => {});
+  } catch (e) { toast(t('camErr')); }
+}
+
+async function stopScanner() {
+  const s = scanner; scanner = null;
+  if (!s) return;
+  try { if (s.isScanning) await s.stop(); s.clear(); } catch (e) {}
+}
+
+function onRead(text, result) {
+  const code = normalize(text);
+  const isQr = result && result.result && result.result.format && result.result.format.formatName === 'QR_CODE';
+  const now = Date.now();
+  // código de barras: exige 2 leituras iguais seguidas para evitar leitura errada
+  if (!isQr && !(last.code === code && now - last.at < 2000)) { last = { code, at: now }; return; }
+  if (navigator.vibrate) navigator.vibrate(80);
+  gotCode(code);
+}
+
+function gotCode(code) {
+  if (!code || $('scanView').classList.contains('hidden')) return; // ignora leitura atrasada
+  swapOv($('scanView'), $('formView'));
+  fillForm(code, {});
+}
+
+// ---------- formulário ----------
+function fillForm(codigo, opts) {
+  const ex = S.items.find(x => x.codigo === codigo);
+  S.form = {
+    codigo, photo: null, fotoUrl: ex ? ex.fotoUrl || '' : '', cat: ex ? ex.categoria || '' : '',
+    ctl: ex ? ex.controle || '' : '', ctlTouched: !!(ex && ex.controle), unit: ex ? ex.unidade || 'un' : 'un'
+  };
+  $('formTitle').textContent = t(ex ? 'editItem' : 'newItem');
+  $('fCode').textContent = codigo;
+  $('fName').value = ex ? ex.nome || '' : '';
+  $('fBrand').value = ex ? ex.marca || '' : '';
+  $('fUnit').value = S.form.unit;
+  $('fQty').value = ex ? ex.quantidade || '' : '';
+  $('fWhere').value = ex ? ex.local || '' : (LS.get('lastWhere', ''));
+  $('fNotes').value = ex ? ex.obs || '' : '';
+  $('formErr').textContent = '';
+  $('fMeta').textContent = ex ? `${t('by')} ${ex.criadoPor || '—'} · ${fmtDate(ex.criadoEm)} · ${t('upd')} ${fmtDate(ex.atualizadoEm)}` : '';
+  renderCats(); renderCtl(); renderPhoto();
+  $('formView').querySelector('.sheet-body').scrollTop = 0;
+  if (ex) setPill(t('already'), '');
+  else if (opts.internal) setPill(t('internal'), '');
+  else doLookup(codigo);
+}
+
+function setPill(text, cls) { const p = $('pill'); p.textContent = text; p.className = 'pill ' + (cls || ''); }
+
+async function doLookup(code) {
+  setPill(t('looking'), '');
+  let p = null;
+  try { p = API ? (await api({ action: 'lookup', code })).product : await publicLookup(code); } catch (e) {}
+  if (!S.form || S.form.codigo !== code) return;
+  if (!p) { setPill(t('notFound'), 'warn'); $('fName').focus(); return; }
+  if (!$('fName').value) $('fName').value = p.name || '';
+  if (!$('fBrand').value) $('fBrand').value = p.brand || '';
+  if (!S.form.photo && !S.form.fotoUrl && p.image) { S.form.fotoUrl = p.image; renderPhoto(); }
+  if (!S.form.cat) {
+    const guess = { openfoodfacts: 'bebidas', openbeautyfacts: 'amenities' }[p.source];
+    if (guess) pickCat(guess);
+  }
+  setPill(`${t('found')} · ${p.source}`, 'ok');
+}
+
+function renderCats() {
+  $('fCat').innerHTML = CATS.map(c => `<button type="button" data-cat="${c[0]}" class="${S.form && S.form.cat === c[0] ? 'on' : ''}">${c[1]} ${esc(t('cat_' + c[0]))}</button>`).join('');
+}
+function renderCtl() {
+  $('fCtl').innerHTML = CTLS.map(c => `<button type="button" data-ctl="${c}" class="${S.form && S.form.ctl === c ? 'on' : ''}"><b>${esc(t('ctl_' + c))}</b><small>${esc(t('ctlh_' + c))}</small></button>`).join('');
+}
+function renderPhoto() {
+  const src = S.form && (S.form.photo || S.form.fotoUrl);
+  $('photoBox').classList.toggle('has', !!src);
+  if (src) $('photoPrev').src = src; else $('photoPrev').removeAttribute('src');
+  $('photoHint').textContent = t(src ? 'photoChange' : 'photoAdd');
+}
+function pickCat(id) {
+  S.form.cat = id;
+  if (!S.form.ctlTouched) S.form.ctl = catOf(id)[2];
+  renderCats(); renderCtl();
+}
+
+$('fCat').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) pickCat(b.dataset.cat); });
+$('fCtl').addEventListener('click', e => { const b = e.target.closest('[data-ctl]'); if (!b) return; S.form.ctl = b.dataset.ctl; S.form.ctlTouched = true; renderCtl(); });
+$('fUnit').addEventListener('change', e => { if (S.form) S.form.unit = e.target.value; });
+
+function compress(file, max, q) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = reject; img.src = url;
+  });
+}
+$('fPhoto').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f || !S.form) return;
+  try { S.form.photo = API ? await compress(f, 1000, 0.72) : await compress(f, 420, 0.6); renderPhoto(); } catch (err) {}
+});
+
+async function save(next) {
+  if (!S.form) return;
+  const name = $('fName').value.trim();
+  if (!name) { $('formErr').textContent = t('needName'); $('fName').focus(); return; }
+  if (!S.form.cat) { $('formErr').textContent = t('needCat'); return; }
+  $('formErr').textContent = '';
+  const item = {
+    codigo: S.form.codigo, nome: name, marca: $('fBrand').value.trim(), categoria: S.form.cat,
+    controle: S.form.ctl || catOf(S.form.cat)[2], unidade: $('fUnit').value, quantidade: $('fQty').value.trim(),
+    local: $('fWhere').value.trim(), obs: $('fNotes').value.trim(), fotoUrl: S.form.fotoUrl
+  };
+  const btns = [$('btnSave'), $('btnSaveNext')];
+  btns.forEach(b => b.disabled = true);
+  $(next ? 'btnSaveNext' : 'btnSave').textContent = t('saving');
+  try {
+    let saved;
+    if (API) {
+      saved = (await api({ action: 'save', item, photo: S.form.photo })).item;
+    } else {
+      const now = new Date().toISOString();
+      saved = S.items.find(x => x.codigo === item.codigo) || { criadoPor: S.user, criadoEm: now };
+      Object.assign(saved, item, { atualizadoPor: S.user, atualizadoEm: now });
+      if (S.form.photo) saved.fotoUrl = S.form.photo;
+    }
+    const i = S.items.findIndex(x => x.codigo === saved.codigo);
+    if (i >= 0) S.items[i] = saved; else S.items.push(saved);
+    if (!LS.set(API ? 'cache' : 'items', S.items) && !API) toast(t('storageFull'));
+    LS.set('lastWhere', item.local);
+    render();
+    toast(t('saved'));
+    if (next) { swapOv($('formView'), $('scanView')); S.form = null; startScanner(); }
+    else closeTop(false);
+  } catch (e) {
+    if (String(e.message) === 'bad_key') handleErr(e); else $('formErr').textContent = t('netErr');
+  } finally {
+    btns.forEach(b => b.disabled = false);
+    $('btnSave').textContent = t('save'); $('btnSaveNext').textContent = t('saveNext');
+  }
+}
+$('itemForm').addEventListener('submit', e => { e.preventDefault(); save(true); });
+$('btnSave').addEventListener('click', () => save(false));
+
+// ---------- setup ----------
+function openSetup(err) {
+  $('sName').value = S.user; $('sKey').value = S.key;
+  $('sKeyWrap').classList.toggle('hidden', !API);
+  $('setupErr').textContent = err || '';
+  $('setupView').classList.remove('hidden');
+}
+$('setupForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('sName').value.trim(); if (!name) return;
+  S.user = name; S.key = $('sKey').value.trim();
+  if (API) {
+    try { await api({ action: 'ping' }); }
+    catch (err) { $('setupErr').textContent = String(err.message) === 'bad_key' ? t('badKey') : t('netErr'); return; }
+  }
+  LS.set('user', S.user); LS.set('key', S.key);
+  $('setupView').classList.add('hidden');
+  applyI18n(); loadItems();
+});
+
+// ---------- eventos da tela principal ----------
+$('btnScan').addEventListener('click', () => { openOv($('scanView')); startScanner(); });
+$('btnNoCode').addEventListener('click', () => {
+  const code = 'INT-' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 4)).toUpperCase().slice(-7);
+  openOv($('formView')); fillForm(code, { internal: true }); $('fName').focus();
+});
+$('manualForm').addEventListener('submit', e => { e.preventDefault(); const c = normalize($('manualCode').value); if (c) gotCode(c); });
+$('list').addEventListener('click', e => { const li = e.target.closest('[data-code]'); if (!li) return; openOv($('formView')); fillForm(li.dataset.code, {}); });
+$('q').addEventListener('input', render);
+$('btnCsv').addEventListener('click', exportCsv);
+$('who').addEventListener('click', () => openSetup(''));
+$('lang').addEventListener('change', e => { S.lang = e.target.value; LS.set('lang', S.lang); applyI18n(); });
+
+applyI18n();
+if (!S.user || (API && !S.key)) openSetup(''); else loadItems();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
