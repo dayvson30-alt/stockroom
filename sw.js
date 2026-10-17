@@ -1,4 +1,4 @@
-const V = 'stockroom-v1';
+const V = 'stockroom-v2';
 const SHELL = ['./', './index.html', './config.js', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
