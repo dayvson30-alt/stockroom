@@ -13,6 +13,7 @@ const OUT_HEAD = ['retirada', 'data', 'pessoa', 'casa', 'codigo', 'nome', 'quant
 const MAX_LINES = 100, MAX_QTY = 999;
 const HOUSES_URL = 'https://gist.githubusercontent.com/dayvson30-alt/%ID%/raw/casas.json'; // mesma lista do Deck Report
 const HOUSES_CACHE_S = 21600;
+const MAX_OFFLINE_MS = 30 * 24 * 3600 * 1000, MAX_CLOCK_SKEW_MS = 3600 * 1000;
 
 /** Rode uma vez pelo editor: cria a aba, a pasta de fotos e o código da equipe. */
 function setup() {
@@ -46,6 +47,7 @@ function handle_(p) {
       case 'save': out = { item: save_(p.item || {}, p.photo, user) }; break;
       case 'checkout': out = { items: checkout_(p, user) }; break;
       case 'houses': out = { houses: houses_() }; break;
+      case 'saidas': out = { saidas: readOut_() }; break;
       default: throw new Error('bad_action');
     }
     out.ok = true;
@@ -146,6 +148,23 @@ function outSheet_() {
   return sh;
 }
 
+function readOut_() {
+  const out = outSheet_(), m = out.getLastRow();
+  if (m < 2) return [];
+  return out.getRange(2, 1, m - 1, OUT_HEAD.length).getDisplayValues().map(function (r) {
+    const o = {};
+    OUT_HEAD.forEach(function (h, i) { o[h] = r[i]; });
+    return o;
+  });
+}
+
+// Retirada feita sem sinal chega depois: vale a hora do celular, se for plausível
+function whenOf_(value, now) {
+  const t = new Date(String(value || '')).getTime();
+  if (isNaN(t) || t > now + MAX_CLOCK_SKEW_MS || t < now - MAX_OFFLINE_MS) return new Date(now).toISOString();
+  return new Date(t).toISOString();
+}
+
 function checkLines_(lines) {
   if (!Array.isArray(lines) || !lines.length || lines.length > MAX_LINES) throw new Error('bad_lines');
   return lines.map(function (l) {
@@ -186,7 +205,7 @@ function checkout_(p, user) {
     const seen = m >= 2 && out.getRange(2, 1, m - 1, 1).getDisplayValues().some(function (r) { return r[0] === id; });
     if (seen) return result();
 
-    const now = new Date().toISOString();
+    const now = whenOf_(p.quando, Date.now());
     const log = lines.map(function (l) {
       const r = rows[rowOf[l.codigo]];
       return [id, now, user, casa, l.codigo, r[HEAD.indexOf('nome')], String(l.quantidade), r[HEAD.indexOf('controle')]];

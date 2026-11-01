@@ -98,7 +98,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;transition:.2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%)}
 .banner{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
-.cartbar{margin:0 16px;border:0;border-radius:12px;background:#14b8a6;color:#04211d;font-weight:700;padding:12px;cursor:pointer}
+.cartbar{margin:0 16px;border:0;border-radius:12px;background:#14b8a6;color:#04211d;font-weight:700;font-size:18px;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.badge{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:#fff;color:#0f766e;font-weight:800;font-size:16px}
+.badge:empty{display:none}
+#scanFlash{position:absolute;inset:0;pointer-events:none;z-index:1;transition:box-shadow .15s}
+#scanFlash.ok{box-shadow:inset 0 0 0 12px #22c55e}
+#scanFlash.bad{box-shadow:inset 0 0 0 12px #ef4444}
+body.scanning #toast{bottom:auto;top:calc(72px + env(safe-area-inset-top))}
+.thumb{position:relative}
 .qty{display:flex;align-items:center;gap:6px;flex:none}
 .qty b{min-width:24px;text-align:center}
 .qty button{width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:18px;cursor:pointer}
@@ -123,8 +130,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
 <main>
   <div id="demoBanner" class="banner hidden" data-t="demoBanner"></div>
+  <div id="syncBar" class="banner hidden"></div>
   <section class="hero">
-    <button id="btnOut" class="big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M14 8v8M17 8v8"/></svg><span id="btnOutText"></span></button>
+    <button id="btnOut" class="big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M14 8v8M17 8v8"/></svg><span id="btnOutText"></span><span id="btnOutBadge" class="badge"></span></button>
     <button id="btnScan" class="ghost" data-t="scan"></button>
     <button id="btnNoCode" class="ghost" data-t="nocode"></button>
   </section>
@@ -137,9 +145,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 </main>
 
 <div id="scanView" class="overlay hidden">
+  <div id="scanFlash"></div>
   <div class="scan-top"><b data-t="aim"></b><button class="x" data-close>✕</button></div>
   <div id="reader"></div>
-  <button id="btnSeeCart" class="cartbar hidden" type="button"></button>
+  <button id="btnSeeCart" class="cartbar hidden" type="button"><span>🛒</span><span id="seeCartText"></span><span id="seeCartBadge" class="badge"></span></button>
   <form id="manualForm" class="manual" autocomplete="off">
     <input id="manualCode" inputmode="numeric" data-tp="typecode">
     <button type="submit">OK</button>
@@ -181,7 +190,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     <ul id="cartList" class="list"></ul>
     <label><span data-t="house"></span><input id="cCasa" data-tp="houseEx" maxlength="100" autocomplete="off"></label>
     <ul id="casaHits" class="hits hidden"></ul>
-    <p id="cartErr" class="err"></p>
   </div>
   <div class="cart-foot"><button id="btnFinish" class="big" type="button"></button></div>
 </div>
@@ -200,7 +208,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 <div id="toast"></div>
 
 <script src="config.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="html5-qrcode.min.js"></script>
 <script>
 const API = (window.STOCKROOM_API || '').trim();
 const $ = id => document.getElementById(id);
@@ -222,7 +230,8 @@ const UNITS = ['un', 'cx', 'fardo', 'galao', 'rolo', 'par', 'jogo', 'pacote'];
 const I18N = {
   pt: {
     out: 'Retirar produtos', cart: 'Retirada', scanItem: 'Escanear item', house: 'Casa (opcional)', houseEx: 'número, rua ou condomínio',
-    cartEmpty: 'Nenhum item ainda. Toque em “Escanear item”.', finish: 'Finalizar retirada', finishing: 'Enviando…', done: 'Retirada registrada ✓',
+    cartEmpty: 'Nenhum item ainda. Toque em “Escanear item”.', finish: 'Finalizar retirada', done: 'Retirada guardada ✓', synced: 'Enviada para a planilha ✓',
+    pendingSync: '⏳ Aguardando sinal: {n} retirada(s). Enviam sozinhas com o app aberto.', failedSync: '⚠️ {n} retirada(s) recusada(s) pela planilha. Avise o responsável.', offline: 'Sem sinal · funcionando offline',
     notReg: 'Produto não cadastrado', seeCart: 'Ver retirada', stock: 'Estoque', remove: 'Remover',
     scan: 'Cadastrar produto', nocode: 'Item sem código de barras', search: 'Buscar por nome, marca, código…',
     aim: 'Aponte para o código de barras', typecode: 'ou digite o código', code: 'Código',
@@ -249,7 +258,8 @@ const I18N = {
   },
   en: {
     out: 'Take products', cart: 'Checkout', scanItem: 'Scan item', house: 'House (optional)', houseEx: 'number, street or community',
-    cartEmpty: 'No items yet. Tap “Scan item”.', finish: 'Finish checkout', finishing: 'Sending…', done: 'Checkout recorded ✓',
+    cartEmpty: 'No items yet. Tap “Scan item”.', finish: 'Finish checkout', done: 'Checkout saved ✓', synced: 'Sent to the sheet ✓',
+    pendingSync: '⏳ Waiting for signal: {n} checkout(s). They send by themselves while the app is open.', failedSync: '⚠️ {n} checkout(s) rejected by the sheet. Tell the person in charge.', offline: 'No signal · working offline',
     notReg: 'Product not registered', seeCart: 'View checkout', stock: 'Stock', remove: 'Remove',
     scan: 'Register product', nocode: 'Item without barcode', search: 'Search name, brand, code…',
     aim: 'Point at the barcode', typecode: 'or type the code', code: 'Code',
@@ -276,7 +286,8 @@ const I18N = {
   },
   es: {
     out: 'Retirar productos', cart: 'Retiro', scanItem: 'Escanear artículo', house: 'Casa (opcional)', houseEx: 'número, calle o condominio',
-    cartEmpty: 'Aún no hay artículos. Toca “Escanear artículo”.', finish: 'Finalizar retiro', finishing: 'Enviando…', done: 'Retiro registrado ✓',
+    cartEmpty: 'Aún no hay artículos. Toca “Escanear artículo”.', finish: 'Finalizar retiro', done: 'Retiro guardado ✓', synced: 'Enviado a la hoja ✓',
+    pendingSync: '⏳ Esperando señal: {n} retiro(s). Se envían solos con la app abierta.', failedSync: '⚠️ {n} retiro(s) rechazado(s) por la hoja. Avisa al responsable.', offline: 'Sin señal · funcionando sin conexión',
     notReg: 'Producto no registrado', seeCart: 'Ver retiro', stock: 'Inventario', remove: 'Quitar',
     scan: 'Registrar producto', nocode: 'Artículo sin código de barras', search: 'Buscar nombre, marca, código…',
     aim: 'Apunta al código de barras', typecode: 'o escribe el código', code: 'Código',
@@ -303,7 +314,7 @@ const I18N = {
   }
 };
 
-const S = { lang: LS.get('lang', 'pt'), user: LS.get('user', ''), key: LS.get('key', ''), items: [], form: null, cart: LS.get('cart', null) || newCart(), cartScan: false, houses: LS.get('houses', []) };
+const S = { lang: LS.get('lang', 'pt'), user: LS.get('user', ''), key: LS.get('key', ''), items: [], form: null, cart: LS.get('cart', null) || newCart(), cartScan: false, houses: LS.get('houses', []), outbox: LS.get('outbox', []), rejected: LS.get('rejected', []) };
 const t = k => (I18N[S.lang] && I18N[S.lang][k]) || I18N.pt[k] || k;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const catOf = id => CATS.find(c => c[0] === id);
@@ -324,20 +335,25 @@ function applyI18n() {
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll('[data-tp]').forEach(el => { el.placeholder = t(el.dataset.tp); });
   $('lang').value = S.lang;
-  $('mode').textContent = API ? t('online') : t('demo');
   $('demoBanner').classList.toggle('hidden', !!API);
   $('who').textContent = S.user || '—';
   $('fUnit').innerHTML = UNITS.map(u => `<option value="${u}">${esc(t('u_' + u))}</option>`).join('');
   if (S.form) { $('fUnit').value = S.form.unit; renderCats(); renderCtl(); renderPhoto(); }
-  render(); renderCart();
+  render(); renderCart(); renderSync();
 }
 
 // ---------- dados ----------
-async function api(payload) {
-  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ key: S.key, user: S.user }, payload)) });
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error || 'error');
-  return j;
+const API_TIMEOUT_MS = 60000, SYNC_TIMEOUT_MS = 25000;
+
+// e.fromServer = a planilha respondeu e recusou; sem ele, foi falta de sinal e vale tentar de novo
+async function api(payload, ms) {
+  const c = new AbortController(), h = setTimeout(() => c.abort(), ms || API_TIMEOUT_MS);
+  try {
+    const res = await fetch(API, { method: 'POST', signal: c.signal, body: JSON.stringify(Object.assign({ key: S.key, user: S.user }, payload)) });
+    const j = await res.json();
+    if (!j.ok) throw Object.assign(new Error(j.error || 'error'), { fromServer: true });
+    return j;
+  } finally { clearTimeout(h); }
 }
 
 async function fetchJson(url, ms) {
@@ -365,9 +381,13 @@ async function publicLookup(code) {
 
 async function loadItems() {
   if (!API) { S.items = LS.get('items', []); render(); return; }
-  S.items = LS.get('cache', []); render();
-  try { S.items = (await api({ action: 'list' })).items; LS.set('cache', S.items); render(); loadHouses(); }
-  catch (e) { handleErr(e); }
+  if (!S.items.length) { S.items = LS.get('cache', []); render(); renderCart(); }
+  await flushOutbox();
+  try {
+    S.items = withPending((await api({ action: 'list' }, SYNC_TIMEOUT_MS)).items);
+    LS.set('cache', S.items); render(); renderCart(); loadHouses();
+  } catch (e) { if (e.fromServer) handleErr(e); } // sem sinal: segue com o que está guardado
+  renderSync();
 }
 
 // falhou ou veio vazia: fica com a última lista guardada; a casa também pode ser digitada à mão
@@ -384,6 +404,12 @@ function handleErr(e) {
 }
 
 // ---------- lista ----------
+// foto do Drive não abre sem sinal: fica o ícone da categoria por baixo
+function thumbHtml(url, cat) {
+  const icon = cat ? cat[1] : '📦';
+  return url ? `${icon}<img src="${esc(url)}" alt="" loading="lazy" style="position:absolute;inset:0" onerror="this.remove()">` : icon;
+}
+
 function render() {
   const items = S.items.slice().sort((a, b) => String(b.atualizadoEm || '').localeCompare(String(a.atualizadoEm || '')));
   const n = items.length, ph = items.filter(i => i.fotoUrl).length, nq = items.filter(i => i.quantidade === '' || i.quantidade == null).length;
@@ -395,7 +421,7 @@ function render() {
   if (!shown.length) { $('list').innerHTML = `<li class="empty">${esc(t(n ? 'noMatch' : 'empty'))}</li>`; return; }
   $('list').innerHTML = shown.map(i => {
     const c = catOf(i.categoria);
-    const thumb = i.fotoUrl ? `<img src="${esc(i.fotoUrl)}" alt="" loading="lazy">` : (c ? c[1] : '📦');
+    const thumb = thumbHtml(i.fotoUrl, c);
     const qty = i.quantidade !== '' && i.quantidade != null
       ? `<span class="tag">${esc(i.quantidade)} ${esc(t('u_' + (i.unidade || 'un')))}</span>`
       : `<span class="tag warn">${esc(t('noQty'))}</span>`;
@@ -426,7 +452,7 @@ function swapOv(from, to) { // troca de tela sem mexer no histórico
 function closeTop(fromPop) {
   const el = stack.pop(); if (!el) return;
   el.classList.add('hidden');
-  if (el === $('scanView')) { stopScanner(); S.cartScan = false; $('btnSeeCart').classList.add('hidden'); }
+  if (el === $('scanView')) { stopScanner(); S.cartScan = false; $('btnSeeCart').classList.add('hidden'); document.body.classList.remove('scanning'); }
   if (el === $('formView')) S.form = null;
   if (!fromPop) { skipPop = true; history.back(); }
 }
@@ -478,13 +504,37 @@ function onRead(text, result) {
   if (!isQr && !(last.code === code && now - last.at < 2000)) { last = { code, at: now }; return; }
   if (S.cartScan && added.code === code && now - added.at < SAME_ITEM_MS) { added.at = now; return; }
   added = { code, at: now };
-  if (navigator.vibrate) navigator.vibrate(80);
   gotCode(code);
+}
+
+// ---------- aviso de leitura: bip, vibração (não existe no iPhone) e borda colorida (para o modo silencioso) ----------
+let audio = null;
+function unlockAudio() { // o iPhone só libera o som a partir de um toque na tela
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state !== 'running') audio.resume();
+    tone(1, 0.001, 0);
+  } catch (e) {}
+}
+function tone(freq, secs, vol) {
+  const osc = audio.createOscillator(), gain = audio.createGain();
+  osc.frequency.value = freq; gain.gain.value = vol;
+  osc.connect(gain); gain.connect(audio.destination);
+  osc.start(); osc.stop(audio.currentTime + secs);
+}
+function signal(ok) {
+  if (navigator.vibrate) navigator.vibrate(ok ? 80 : [80, 60, 80]);
+  try {
+    if (audio) { if (audio.state !== 'running') audio.resume(); ok ? tone(1400, 0.12, 0.4) : tone(280, 0.3, 0.5); }
+  } catch (e) {}
+  const f = $('scanFlash'); f.className = ok ? 'ok' : 'bad';
+  clearTimeout(signal.h); signal.h = setTimeout(() => { f.className = ''; }, 400);
 }
 
 function gotCode(code) {
   if (!code || $('scanView').classList.contains('hidden')) return; // ignora leitura atrasada
   if (S.cartScan) { addToCart(code); $('manualCode').value = ''; return; }
+  signal(true);
   swapOv($('scanView'), $('formView'));
   fillForm(code, {});
 }
@@ -625,17 +675,20 @@ function cartChanged() { S.cart.id = newCartId(); LS.set('cart', S.cart); render
 
 function addToCart(code) {
   const it = S.items.find(x => x.codigo === code);
-  if (!it) { toast(`${t('notReg')}: ${code}`); return; }
+  if (!it) { signal(false); toast(`${t('notReg')}: ${code}`); return; }
   const line = S.cart.lines.find(l => l.codigo === code);
   if (line) line.qtd++; else S.cart.lines.push({ codigo: code, qtd: 1 });
   cartChanged();
+  signal(true);
   toast(`+1 ${it.nome}`);
 }
 
 function renderCart() {
   const n = cartCount();
-  $('btnOutText').textContent = n ? `${t('out')} (${n})` : t('out');
-  $('btnSeeCart').textContent = `${t('seeCart')} (${n})`;
+  $('btnOutText').textContent = t('out');
+  $('btnOutBadge').textContent = n ? `🛒 ${n}` : '';
+  $('seeCartText').textContent = t('seeCart');
+  $('seeCartBadge').textContent = n;
   $('btnFinish').textContent = n ? `${t('finish')} (${n})` : t('finish');
   $('btnFinish').disabled = !n;
   $('cCasa').value = S.cart.casa || '';
@@ -643,7 +696,7 @@ function renderCart() {
   $('cartList').innerHTML = S.cart.lines.map(l => {
     const it = S.items.find(x => x.codigo === l.codigo) || { nome: l.codigo };
     const c = catOf(it.categoria);
-    const thumb = it.fotoUrl ? `<img src="${esc(it.fotoUrl)}" alt="" loading="lazy">` : (c ? c[1] : '📦');
+    const thumb = thumbHtml(it.fotoUrl, c);
     const stock = isCounted(it.quantidade) ? `${t('stock')}: ${it.quantidade}` : t('noQty');
     return `<li class="item" data-line="${esc(l.codigo)}"><div class="thumb">${thumb}</div><div class="t">
       <div class="n">${esc(it.nome)}</div><div class="s">${esc(stock)}</div></div>
@@ -688,33 +741,86 @@ function closeHouseHits() {
   $('cartView').querySelector('.sheet-body').classList.remove('picking');
 }
 
-async function finishCart() {
+// A retirada é guardada na hora e enviada quando der: o sinal ruim nunca trava a fila.
+function finishCart() {
   if (!S.cart.lines.length) return;
-  const btn = $('btnFinish');
-  btn.disabled = true; btn.textContent = t('finishing'); $('cartErr').textContent = '';
-  try {
-    const updated = API
-      ? (await api({ action: 'checkout', id: S.cart.id, casa: S.cart.casa, lines: S.cart.lines.map(l => ({ codigo: l.codigo, quantidade: l.qtd })) })).items
-      : demoCheckout(S.cart);
-    updated.forEach(u => { const it = S.items.find(x => x.codigo === u.codigo); if (it) it.quantidade = u.quantidade; });
-    LS.set(API ? 'cache' : 'items', S.items);
-    rememberHouse(S.cart.casa);
-    S.cart = newCart(); LS.set('cart', S.cart);
-    render(); renderCart();
-    closeTop(false);
-    toast(t('done'));
-  } catch (e) {
-    const m = String(e.message);
-    if (m === 'bad_key') handleErr(e);
-    else $('cartErr').textContent = m === 'unknown_code' ? t('notReg') : t('netErr');
-    renderCart();
+  if (API) {
+    const rec = { id: S.cart.id, casa: S.cart.casa, quando: new Date().toISOString(), lines: S.cart.lines.map(l => ({ codigo: l.codigo, quantidade: l.qtd })) };
+    S.outbox.push(rec);
+    if (!LS.set('outbox', S.outbox)) toast(t('storageFull'));
+    takeFromStock(S.items, rec);
+  } else {
+    demoCheckout(S.cart).forEach(u => { const it = S.items.find(x => x.codigo === u.codigo); if (it) it.quantidade = u.quantidade; });
   }
+  LS.set(API ? 'cache' : 'items', S.items);
+  rememberHouse(S.cart.casa);
+  S.cart = newCart(); LS.set('cart', S.cart);
+  render(); renderCart(); renderSync();
+  closeTop(false);
+  toast(t('done'));
+  syncNow();
 }
 
-$('btnOut').addEventListener('click', () => { $('cartErr').textContent = ''; renderCart(); openOv($('cartView')); });
+function takeFromStock(items, rec) {
+  rec.lines.forEach(l => {
+    const it = items.find(x => x.codigo === l.codigo);
+    if (it && isCounted(it.quantidade)) it.quantidade = String(Number(it.quantidade) - l.quantidade);
+  });
+}
+
+// o que veio da planilha ainda não inclui as retiradas à espera de sinal
+function withPending(items) { S.outbox.forEach(rec => takeFromStock(items, rec)); return items; }
+
+const REJECTED_FOR_GOOD = ['unknown_code', 'bad_qty', 'bad_lines', 'bad_id', 'no_user'];
+let flushing = false;
+async function flushOutbox() {
+  if (!API || flushing || !S.outbox.length) return 0;
+  flushing = true;
+  let sent = 0;
+  try {
+    while (S.outbox.length) {
+      const rec = S.outbox[0];
+      try {
+        await api(Object.assign({ action: 'checkout' }, rec), SYNC_TIMEOUT_MS);
+        sent++;
+      } catch (e) {
+        if (e.message === 'bad_key') { handleErr(e); break; }
+        if (!REJECTED_FOR_GOOD.includes(e.message)) break; // sem sinal ou planilha ocupada: tenta de novo com o mesmo id, sem duplicar
+        S.rejected.push(Object.assign({ erro: e.message }, rec)); LS.set('rejected', S.rejected);
+      }
+      S.outbox.shift(); LS.set('outbox', S.outbox);
+    }
+  } finally { flushing = false; renderSync(); }
+  return sent;
+}
+
+async function syncNow() {
+  const sent = await flushOutbox();
+  if (sent) { toast(t('synced')); loadItems(); }
+}
+
+function renderSync() {
+  // sinal fraco: o celular diz que está online, mas a fila parada mostra que não está chegando
+  $('mode').textContent = !API ? t('demo') : navigator.onLine && !S.outbox.length ? t('online') : t('offline');
+  const msgs = [];
+  if (S.outbox.length) msgs.push(t('pendingSync').replace('{n}', S.outbox.length));
+  if (S.rejected.length) msgs.push(t('failedSync').replace('{n}', S.rejected.length));
+  $('syncBar').textContent = msgs.join(' ');
+  $('syncBar').classList.toggle('hidden', !msgs.length);
+}
+
+const SYNC_EVERY_MS = 30000;
+setInterval(syncNow, SYNC_EVERY_MS);
+window.addEventListener('online', () => { renderSync(); syncNow(); });
+window.addEventListener('offline', renderSync);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(); });
+
+$('btnOut').addEventListener('click', () => { renderCart(); openOv($('cartView')); });
 $('btnCartScan').addEventListener('click', () => {
+  unlockAudio();
   S.cartScan = true; added = { code: '', at: 0 };
   $('btnSeeCart').classList.remove('hidden');
+  document.body.classList.add('scanning');
   openOv($('scanView')); startScanner();
 });
 $('btnSeeCart').addEventListener('click', () => closeTop(false));
@@ -758,7 +864,7 @@ $('setupForm').addEventListener('submit', async e => {
 });
 
 // ---------- eventos da tela principal ----------
-$('btnScan').addEventListener('click', () => { openOv($('scanView')); startScanner(); });
+$('btnScan').addEventListener('click', () => { unlockAudio(); openOv($('scanView')); startScanner(); });
 $('btnNoCode').addEventListener('click', () => {
   const code = 'INT-' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 4)).toUpperCase().slice(-7);
   openOv($('formView')); fillForm(code, { internal: true }); $('fName').focus();
