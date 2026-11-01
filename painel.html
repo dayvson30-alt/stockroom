@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="robots" content="noindex">
+<title>FF Stock Painel</title>
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f3f6f5;--card:#fff;--ink:#10201d;--muted:#5d6d69;--line:#dfe7e4;
+  --brand:#0f766e;--brand-ink:#fff;--soft:#e6f4f1;--ok:#15803d;--okbg:#dcfce7;--warn:#a16207;--warnbg:#fef3c7;--err:#b91c1c;--errbg:#fee2e2;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1312;--card:#152120;--ink:#e7f0ee;--muted:#93a6a1;--line:#24332f;
+  --brand:#14b8a6;--brand-ink:#04211d;--soft:#13302c;--ok:#4ade80;--okbg:#12301f;--warn:#fbbf24;--warnbg:#3a2d0b;--err:#f87171;--errbg:#3b1616;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+.hidden{display:none!important}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:36px;height:36px;border-radius:10px;flex:none}
+.brand b{display:block;font-size:17px}
+.brand small{display:block;color:var(--muted);font-size:12px}
+select{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 10px;font-size:13px}
+main{max-width:720px;margin:0 auto;padding:16px 16px 120px;display:grid;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.stat b{display:block;font-size:24px}
+.stat span{font-size:12px;color:var(--muted)}
+.stat.alert b{color:var(--err)}
+h2{font-size:15px;margin:0 0 8px}
+h2 small{font-weight:400;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.alert-card{border-color:var(--err)}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.thumb{position:relative;width:44px;height:44px;border-radius:10px;background:var(--soft);flex:none;overflow:hidden;display:grid;place-items:center}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.t{min-width:0;flex:1}
+.n{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s{font-size:12px;color:var(--muted)}
+.s.low{color:var(--err);font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--warnbg);color:var(--warn);margin-left:4px}
+.req{flex:none;border:1px solid var(--brand);background:transparent;color:var(--brand);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;cursor:pointer}
+.req.on{background:var(--brand);color:var(--brand-ink)}
+.bar{height:6px;border-radius:3px;background:var(--brand);margin-top:4px}
+.v{flex:none;font-weight:700;font-size:14px}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.grid2{display:grid;gap:16px}
+@media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}}
+.big{width:100%;border:0;border-radius:var(--r);background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:17px;padding:16px;cursor:pointer}
+.big:disabled{opacity:.6}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bg);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.foot>div{max-width:720px;margin:0 auto}
+.overlay{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column}
+.sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
+.x{border:0;background:rgba(127,127,127,.18);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;flex:none}
+.sheet-body{flex:1;overflow:auto;padding:16px;max-width:720px;width:100%;margin:0 auto;display:grid;gap:14px;align-content:start}
+.sheet-body label{display:grid;gap:6px}
+.sheet-body label>span{font-size:13px;font-weight:600;color:var(--muted)}
+.sheet-body input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;outline:none}
+.qty{display:flex;align-items:center;gap:6px;flex:none}
+.qty b{min-width:26px;text-align:center}
+.qty button{width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:18px;cursor:pointer}
+.err{color:var(--err);font-size:14px;margin:0}
+.banner{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+pre{white-space:pre-wrap;font:13px/1.4 inherit;background:var(--soft);border-radius:12px;padding:12px;margin:0}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;transition:.2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img class="logo" src="ff-logo.png" alt="Florida Fun"><div><b>FF Stock · Painel</b><small id="who"></small></div></div>
+  <select id="period" aria-label="Período"><option value="7">7 dias</option><option value="30">30 dias</option><option value="0">Tudo</option></select>
+</header>
+
+<main id="main" class="hidden">
+  <div id="netWarn" class="banner hidden">Sem conexão. Mostrando os últimos dados carregados.</div>
+  <section class="stats" id="stats"></section>
+  <section class="card alert-card"><h2>⚠️ Comprar agora <small id="lowHint"></small></h2><div id="low"></div></section>
+  <div class="grid2">
+    <section class="card"><h2>Consumo por pessoa</h2><div id="byPerson"></div></section>
+    <section class="card"><h2>Consumo por casa</h2><div id="byHouse"></div><p class="note" id="noHouse"></p></section>
+  </div>
+  <section class="card"><h2>Mais retirados</h2><div id="top"></div></section>
+  <section class="card"><h2>Últimas retiradas</h2><div id="recent"></div></section>
+  <section class="card"><h2>Sem saída no período <small id="idleHint"></small></h2><div id="idle"></div></section>
+</main>
+
+<div id="foot" class="foot hidden"><div><button id="btnOrder" class="big" type="button"></button></div></div>
+
+<div id="orderView" class="overlay hidden">
+  <div class="sheet-top"><button class="x" id="closeOrder" type="button">✕</button><b>Pedido de compra</b><span style="width:40px"></span></div>
+  <div class="sheet-body">
+    <div class="card" id="orderLines"></div>
+    <div><h2>Mensagem</h2><pre id="orderMsg"></pre></div>
+    <p id="orderErr" class="err"></p>
+    <button id="btnSend" class="big" type="button">Enviar para o aprovador</button>
+  </div>
+</div>
+
+<div id="loginView" class="overlay hidden">
+  <div class="sheet-top"><span style="width:40px"></span><b>FF Stock · Painel</b><span style="width:40px"></span></div>
+  <form id="loginForm" class="sheet-body" autocomplete="off">
+    <p style="margin:0">Acesso do gestor.</p>
+    <label><span>Seu nome</span><input id="lName" maxlength="60" required></label>
+    <label><span>Código do gestor</span><input id="lKey" inputmode="numeric" maxlength="20" required></label>
+    <p id="loginErr" class="err"></p>
+    <button class="big" type="submit">Entrar</button>
+  </form>
+</div>
+
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+const API = (window.STOCKROOM_API || '').trim();
+const $ = id => document.getElementById(id);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('srp_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('srp_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DAY_MS = 86400000, TOP_ROWS = 8, IDLE_ROWS = 8, RECENT_ROWS = 10, MAX_QTY = 999;
+const S = { user: LS.get('user', ''), key: LS.get('key', ''), data: LS.get('data', null), order: LS.get('order', {}), period: LS.get('period', '7') };
+
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('on'), 2500);
+}
+const fmtDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
+const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${fmtDay(iso)} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`; };
+const isCounted = q => /^-?\d+$/.test(String(q == null ? '' : q).trim());
+const minOf = it => /^\d+$/.test(String(it.minimo || '').trim()) ? Number(it.minimo) : S.data.minimo;
+// repõe até o dobro do mínimo; o gestor ajusta antes de enviar
+const suggested = it => Math.max(1, minOf(it) * 2 - Number(it.quantidade));
+const thumb = it => `<div class="thumb">📦${it && it.fotoUrl ? `<img src="${esc(it.fotoUrl)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>`;
+
+async function api(payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ key: S.key, user: S.user }, payload)) });
+  const j = await res.json();
+  if (!j.ok) throw Object.assign(new Error(j.error || 'error'), { fromServer: true });
+  return j;
+}
+
+async function load() {
+  try {
+    S.data = await api({ action: 'panel' });
+    LS.set('data', S.data);
+    $('netWarn').classList.add('hidden');
+    render();
+    return true;
+  } catch (e) {
+    if (e.message === 'bad_key') { openLogin('Código do gestor inválido.'); return false; }
+    $('netWarn').classList.toggle('hidden', !S.data);
+    if (S.data) render();
+    return !!S.data;
+  }
+}
+
+function inPeriod(iso) {
+  const days = Number(S.period);
+  return !days || new Date(iso).getTime() >= Date.now() - days * DAY_MS;
+}
+
+function sumBy(rows, keyOf) {
+  const m = {};
+  rows.forEach(r => { const k = keyOf(r); if (k) m[k] = (m[k] || 0) + Number(r.quantidade || 0); });
+  return Object.keys(m).map(k => ({ k, v: m[k] })).sort((a, b) => b.v - a.v);
+}
+
+function bars(list, limit) {
+  if (!list.length) return '<div class="empty">Nada no período.</div>';
+  const max = list[0].v;
+  return list.slice(0, limit).map(x => `<div class="row"><div class="t"><div class="n">${esc(x.k)}</div><div class="bar" style="width:${Math.max(4, Math.round(x.v / max * 100))}%"></div></div><div class="v">${x.v}</div></div>`).join('');
+}
+
+function render() {
+  const d = S.data;
+  const low = d.items.filter(i => isCounted(i.quantidade) && Number(i.quantidade) <= minOf(i)).sort((a, b) => Number(a.quantidade) - Number(b.quantidade));
+  const rows = d.saidas.filter(s => inPeriod(s.data));
+  const units = rows.reduce((n, r) => n + Number(r.quantidade || 0), 0);
+  const carts = new Set(rows.map(r => r.retirada)).size;
+  const noHouse = rows.filter(r => !r.casa).reduce((n, r) => n + Number(r.quantidade || 0), 0);
+
+  $('who').textContent = S.user;
+  $('stats').innerHTML = `<div class="stat alert"><b>${low.length}</b><span>para comprar</span></div>
+    <div class="stat"><b>${carts}</b><span>retiradas</span></div>
+    <div class="stat"><b>${units}</b><span>itens retirados</span></div>
+    <div class="stat"><b>${d.items.filter(i => isCounted(i.quantidade)).length}/${d.items.length}</b><span>produtos com contagem</span></div>`;
+
+  const lastAsked = {};
+  d.pedidos.forEach(p => { if (!lastAsked[p.codigo] || p.data > lastAsked[p.codigo]) lastAsked[p.codigo] = p.data; });
+  $('lowHint').textContent = `(mínimo padrão: ${d.minimo})`;
+  $('low').innerHTML = low.length ? low.map(i => `<div class="row">${thumb(i)}<div class="t"><div class="n">${esc(i.nome)}</div>
+      <div class="s low">Restam ${esc(i.quantidade)} · mínimo ${minOf(i)}${lastAsked[i.codigo] ? `<span class="tag">Solicitado ${fmtDay(lastAsked[i.codigo])}</span>` : ''}</div></div>
+      <button type="button" class="req ${S.order[i.codigo] ? 'on' : ''}" data-req="${esc(i.codigo)}">${S.order[i.codigo] ? '✓ No pedido' : 'Solicitar compra'}</button></div>`).join('')
+    : '<div class="empty">Nenhum produto abaixo do mínimo.</div>';
+
+  $('byPerson').innerHTML = bars(sumBy(rows, r => r.pessoa), TOP_ROWS);
+  $('byHouse').innerHTML = bars(sumBy(rows, r => r.casa), TOP_ROWS);
+  $('noHouse').textContent = units ? `${Math.round(noHouse / units * 100)}% dos itens saíram sem casa informada.` : '';
+  $('top').innerHTML = bars(sumBy(rows, r => r.nome), TOP_ROWS);
+
+  const recent = rows.slice().sort((a, b) => String(b.data).localeCompare(String(a.data))).slice(0, RECENT_ROWS);
+  $('recent').innerHTML = recent.length ? recent.map(r => `<div class="row"><div class="t"><div class="n">${esc(r.nome)} × ${esc(r.quantidade)}</div>
+      <div class="s">${esc(r.pessoa)} · ${fmtTime(r.data)}${r.casa ? ' · ' + esc(r.casa) : ''}</div></div></div>`).join('') : '<div class="empty">Nada no período.</div>';
+
+  const moved = new Set(rows.map(r => r.codigo));
+  const idle = d.items.filter(i => isCounted(i.quantidade) && !moved.has(i.codigo));
+  $('idleHint').textContent = idle.length > IDLE_ROWS ? `(${IDLE_ROWS} de ${idle.length})` : '';
+  $('idle').innerHTML = idle.length ? idle.slice(0, IDLE_ROWS).map(i => `<div class="row">${thumb(i)}<div class="t"><div class="n">${esc(i.nome)}</div><div class="s">Em estoque: ${esc(i.quantidade)}</div></div></div>`).join('') : '<div class="empty">Todos tiveram saída.</div>';
+
+  renderOrderBar();
+}
+
+// ---------- pedido de compra ----------
+const orderCodes = () => Object.keys(S.order).filter(c => S.data.items.some(i => i.codigo === c));
+function saveOrder() { LS.set('order', S.order); }
+
+function renderOrderBar() {
+  const n = orderCodes().length;
+  $('foot').classList.toggle('hidden', !n);
+  $('btnOrder').textContent = `🛒 Ver pedido (${n}) e enviar`;
+}
+
+function orderMessage() {
+  const lines = orderCodes().map(c => { const i = S.data.items.find(x => x.codigo === c); return `• ${i.nome}: ${S.order[c]} un. (restam ${i.quantidade})`; });
+  return `🛒 Solicitação de compra — FF Stock\nSolicitante: ${S.user} · ${fmtDay(new Date().toISOString())}\n\n${lines.join('\n')}\n\nAprova?`;
+}
+
+function renderOrder() {
+  const codes = orderCodes();
+  $('orderLines').innerHTML = codes.map(c => { const i = S.data.items.find(x => x.codigo === c);
+    return `<div class="row" data-line="${esc(c)}">${thumb(i)}<div class="t"><div class="n">${esc(i.nome)}</div><div class="s">Restam ${esc(i.quantidade)}</div></div>
+      <div class="qty"><button type="button" data-d="-1" aria-label="Diminuir">${S.order[c] > 1 ? '−' : '🗑'}</button><b>${S.order[c]}</b><button type="button" data-d="1" aria-label="Aumentar">+</button></div></div>`; }).join('');
+  $('orderMsg').textContent = orderMessage();
+  $('btnSend').textContent = S.data.aprovador ? 'Enviar para o aprovador' : 'Aprovador não configurado';
+  $('btnSend').disabled = !S.data.aprovador || !codes.length;
+  if (!codes.length) closeOrder();
+}
+function openOrder() { $('orderErr').textContent = ''; $('orderView').classList.remove('hidden'); renderOrder(); }
+function closeOrder() { $('orderView').classList.add('hidden'); render(); }
+
+// abre o WhatsApp no próprio toque (senão o celular bloqueia) e registra o pedido em seguida
+function sendOrder() {
+  const lines = orderCodes().map(c => ({ codigo: c, quantidade: S.order[c] }));
+  const url = `https://wa.me/${encodeURIComponent(S.data.aprovador)}?text=${encodeURIComponent(orderMessage())}`;
+  const id = 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  if (!window.open(url, '_blank')) location.href = url;
+  S.order = {}; saveOrder();
+  closeOrder();
+  api({ action: 'order', id, lines })
+    .then(() => { toast('Pedido registrado ✓'); return load(); })
+    .catch(() => toast('WhatsApp aberto, mas o pedido não ficou registrado no painel.'));
+}
+
+$('low').addEventListener('click', e => {
+  const b = e.target.closest('[data-req]'); if (!b) return;
+  const c = b.dataset.req;
+  if (S.order[c]) delete S.order[c];
+  else S.order[c] = suggested(S.data.items.find(i => i.codigo === c));
+  saveOrder(); render();
+});
+$('orderLines').addEventListener('click', e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  const c = b.closest('[data-line]').dataset.line;
+  const q = Math.min(MAX_QTY, S.order[c] + Number(b.dataset.d));
+  if (q < 1) delete S.order[c]; else S.order[c] = q;
+  saveOrder(); renderOrder();
+});
+$('btnOrder').addEventListener('click', openOrder);
+$('closeOrder').addEventListener('click', closeOrder);
+$('btnSend').addEventListener('click', sendOrder);
+$('period').addEventListener('change', e => { S.period = e.target.value; LS.set('period', S.period); render(); });
+
+// ---------- acesso ----------
+function openLogin(err) {
+  $('lName').value = S.user; $('lKey').value = S.key; $('loginErr').textContent = err || '';
+  $('loginView').classList.remove('hidden'); $('main').classList.add('hidden');
+}
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  S.user = $('lName').value.trim(); S.key = $('lKey').value.trim();
+  if (!S.user || !S.key) return;
+  $('loginErr').textContent = '';
+  try {
+    S.data = await api({ action: 'panel' });
+  } catch (err) {
+    $('loginErr').textContent = err.message === 'bad_key' ? 'Código do gestor inválido.' : 'Sem conexão. Tente de novo.';
+    return;
+  }
+  LS.set('user', S.user); LS.set('key', S.key); LS.set('data', S.data);
+  $('loginView').classList.add('hidden'); $('main').classList.remove('hidden');
+  render();
+});
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.key && $('loginView').classList.contains('hidden')) load(); });
+
+$('period').value = S.period;
+if (!S.user || !S.key) openLogin('');
+else {
+  $('main').classList.remove('hidden');
+  if (S.data) render();
+  load();
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

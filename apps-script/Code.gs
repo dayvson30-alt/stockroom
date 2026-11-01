@@ -5,15 +5,20 @@
  */
 const SHEET_NAME = 'Produtos';
 const HEAD = ['codigo', 'nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local',
-  'fotoUrl', 'obs', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm'];
+  'fotoUrl', 'obs', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm', 'minimo'];
 const PHOTO_FOLDER = 'StockRoom - Fotos';
-const EDITABLE = ['nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs'];
+const EDITABLE = ['nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs', 'minimo'];
 const OUT_SHEET = 'Saidas';
 const OUT_HEAD = ['retirada', 'data', 'pessoa', 'casa', 'codigo', 'nome', 'quantidade', 'controle'];
 const MAX_LINES = 100, MAX_QTY = 999;
 const HOUSES_URL = 'https://gist.githubusercontent.com/dayvson30-alt/%ID%/raw/casas.json'; // mesma lista do Deck Report
 const HOUSES_CACHE_S = 21600;
 const MAX_OFFLINE_MS = 30 * 24 * 3600 * 1000, MAX_CLOCK_SKEW_MS = 3600 * 1000;
+const ORDER_SHEET = 'Compras';
+const ORDER_HEAD = ['pedido', 'data', 'solicitante', 'codigo', 'nome', 'quantidade', 'saldo', 'status'];
+const MANAGER_ACTIONS = ['panel', 'order'];
+const FALLBACK_MIN = 5;
+const PANEL_URL = 'https://dayvson30-alt.github.io/stockroom/painel.html';
 
 /** Rode uma vez pelo editor: cria a aba, a pasta de fotos e o código da equipe. */
 function setup() {
@@ -37,7 +42,9 @@ function doPost(e) {
 function handle_(p) {
   let out;
   try {
-    const code = PropertiesService.getScriptProperties().getProperty('TEAM_CODE');
+    const isManager = MANAGER_ACTIONS.indexOf(p.action) >= 0; // o painel tem código próprio
+    const code = PropertiesService.getScriptProperties().getProperty(isManager ? 'MANAGER_CODE' : 'TEAM_CODE');
+    if (isManager && !code) throw new Error('bad_key');
     if (code && String(p.key || '') !== code) throw new Error('bad_key');
     const user = String(p.user || '').trim().slice(0, 60);
     switch (p.action) {
@@ -47,7 +54,8 @@ function handle_(p) {
       case 'save': out = { item: save_(p.item || {}, p.photo, user) }; break;
       case 'checkout': out = { items: checkout_(p, user) }; break;
       case 'houses': out = { houses: houses_() }; break;
-      case 'saidas': out = { saidas: readOut_() }; break;
+      case 'panel': out = panel_(); break;
+      case 'order': order_(p, user); out = {}; break;
       default: throw new Error('bad_action');
     }
     out.ok = true;
@@ -65,6 +73,9 @@ function sheet_() {
     sh.getRange(1, 1, sh.getMaxRows(), HEAD.length).setNumberFormat('@'); // tudo texto: preserva zeros do código
     sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]).setFontWeight('bold');
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < HEAD.length) { // planilha criada antes de existir a última coluna
+    sh.getRange(1, HEAD.length, sh.getMaxRows(), 1).setNumberFormat('@');
+    sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]).setFontWeight('bold');
   }
   return sh;
 }
@@ -136,26 +147,97 @@ function save_(item, photo, user) {
   }
 }
 
-function outSheet_() {
+function logSheet_(name, head) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(OUT_SHEET);
+  let sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = ss.insertSheet(OUT_SHEET);
-    sh.getRange(1, 1, sh.getMaxRows(), OUT_HEAD.length).setNumberFormat('@');
-    sh.getRange(1, 1, 1, OUT_HEAD.length).setValues([OUT_HEAD]).setFontWeight('bold');
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, sh.getMaxRows(), head.length).setNumberFormat('@');
+    sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     sh.setFrozenRows(1);
   }
   return sh;
 }
+function outSheet_() { return logSheet_(OUT_SHEET, OUT_HEAD); }
+function orderSheet_() { return logSheet_(ORDER_SHEET, ORDER_HEAD); }
 
-function readOut_() {
-  const out = outSheet_(), m = out.getLastRow();
+function readLog_(sh, head) {
+  const m = sh.getLastRow();
   if (m < 2) return [];
-  return out.getRange(2, 1, m - 1, OUT_HEAD.length).getDisplayValues().map(function (r) {
+  return sh.getRange(2, 1, m - 1, head.length).getDisplayValues().map(function (r) {
     const o = {};
-    OUT_HEAD.forEach(function (h, i) { o[h] = r[i]; });
+    head.forEach(function (h, i) { o[h] = r[i]; });
     return o;
   });
+}
+
+function defaultMin_() {
+  const n = Number(PropertiesService.getScriptProperties().getProperty('DEFAULT_MIN'));
+  return Number.isInteger(n) && n > 0 ? n : FALLBACK_MIN;
+}
+
+function panel_() {
+  return {
+    items: readAll_(),
+    saidas: readLog_(outSheet_(), OUT_HEAD),
+    pedidos: readLog_(orderSheet_(), ORDER_HEAD),
+    minimo: defaultMin_(),
+    aprovador: PropertiesService.getScriptProperties().getProperty('APPROVER_PHONE') || ''
+  };
+}
+
+/** Registra o pedido enviado ao aprovador; o id torna o envio repetível. */
+function order_(p, user) {
+  const id = String(p.id || '');
+  if (!/^[\w-]{6,40}$/.test(id)) throw new Error('bad_id');
+  if (!user) throw new Error('no_user');
+  const lines = checkLines_(p.lines);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const items = readAll_();
+    const log = lines.map(function (l) {
+      const it = items.filter(function (i) { return i.codigo === l.codigo; })[0];
+      if (!it) throw new Error('unknown_code');
+      return [id, new Date().toISOString(), user, l.codigo, it.nome, String(l.quantidade), it.quantidade, 'solicitado'];
+    });
+    const sh = orderSheet_();
+    const m = sh.getLastRow();
+    const seen = m >= 2 && sh.getRange(2, 1, m - 1, 1).getDisplayValues().some(function (r) { return r[0] === id; });
+    if (seen) return;
+    const rg = sh.getRange(m + 1, 1, log.length, ORDER_HEAD.length);
+    rg.setNumberFormat('@');
+    rg.setValues(log);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function lowStock_(items, fallbackMin) {
+  return items.filter(function (i) {
+    if (!/^-?\d+$/.test(String(i.quantidade).trim())) return false; // sem contagem não dá alerta
+    const min = /^\d+$/.test(String(i.minimo).trim()) ? Number(i.minimo) : fallbackMin;
+    return Number(i.quantidade) <= min;
+  });
+}
+
+/** Rodado por gatilho diário: só envia e-mail se houver algo para comprar. */
+function alertaDiario() {
+  const to = PropertiesService.getScriptProperties().getProperty('ALERT_EMAIL');
+  if (!to) return;
+  const low = lowStock_(readAll_(), defaultMin_());
+  if (!low.length) return;
+  const body = low.map(function (i) { return '- ' + i.nome + ': restam ' + i.quantidade; }).join('\n');
+  MailApp.sendEmail(to, 'FF Stock: ' + low.length + ' produto(s) para comprar',
+    'Estoque baixo, recomendamos comprar:\n\n' + body + '\n\nMonte o pedido no painel: ' + PANEL_URL);
+}
+
+function createDailyTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'alertaDiario') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('alertaDiario').timeBased().everyDays(1).atHour(7).create();
 }
 
 // Retirada feita sem sinal chega depois: vale a hora do celular, se for plausível
