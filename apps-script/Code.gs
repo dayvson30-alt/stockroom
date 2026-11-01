@@ -17,6 +17,7 @@ const MAX_OFFLINE_MS = 30 * 24 * 3600 * 1000, MAX_CLOCK_SKEW_MS = 3600 * 1000;
 const ORDER_SHEET = 'Compras';
 const ORDER_HEAD = ['pedido', 'data', 'solicitante', 'codigo', 'nome', 'quantidade', 'saldo', 'status'];
 const MANAGER_ACTIONS = ['panel', 'order'];
+const SHEET_ONLY_FIELDS = ['criadoPor', 'atualizadoPor']; // quem cadastrou fica só na planilha
 const FALLBACK_MIN = 5;
 const PANEL_URL = 'https://dayvson30-alt.github.io/stockroom/painel.html';
 
@@ -49,9 +50,9 @@ function handle_(p) {
     const user = String(p.user || '').trim().slice(0, 60);
     switch (p.action) {
       case 'ping': out = {}; break;
-      case 'list': out = { items: readAll_() }; break;
+      case 'list': out = { items: readAll_().map(forApp_) }; break;
       case 'lookup': out = lookup_(String(p.code || '')); break;
-      case 'save': out = { item: save_(p.item || {}, p.photo, user) }; break;
+      case 'save': out = { item: forApp_(save_(p.item || {}, p.photo, user)) }; break;
       case 'checkout': out = { items: checkout_(p, user) }; break;
       case 'houses': out = { houses: houses_() }; break;
       case 'panel': out = panel_(); break;
@@ -92,6 +93,12 @@ function folder_() {
 function rowToObj_(r) {
   const o = {};
   HEAD.forEach(function (h, i) { o[h] = r[i]; });
+  return o;
+}
+
+function forApp_(item) {
+  const o = {};
+  Object.keys(item).forEach(function (k) { if (SHEET_ONLY_FIELDS.indexOf(k) < 0) o[k] = item[k]; });
   return o;
 }
 
@@ -178,7 +185,7 @@ function defaultMin_() {
 
 function panel_() {
   return {
-    items: readAll_(),
+    items: readAll_().map(forApp_),
     saidas: readLog_(outSheet_(), OUT_HEAD),
     pedidos: readLog_(orderSheet_(), ORDER_HEAD),
     minimo: defaultMin_(),

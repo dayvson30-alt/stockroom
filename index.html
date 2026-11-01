@@ -246,7 +246,7 @@ const I18N = {
     camErr: 'Não consegui abrir a câmera. Permita o acesso ou digite o código.',
     welcome: 'Estoque no celular: retire e cadastre produtos escaneando o código.',
     yourName: 'Seu nome', teamCode: 'Código da equipe', start: 'Começar', badKey: 'Código da equipe inválido.',
-    netErr: 'Sem conexão com a planilha. Tente de novo.', by: 'Cadastrado por', upd: 'atualizado',
+    netErr: 'Sem conexão com a planilha. Tente de novo.', by: 'Cadastrado em', upd: 'atualizado',
     demoBanner: 'Modo demonstração: os dados ficam salvos só neste celular.', storageFull: 'Memória do celular cheia — exporte o CSV.',
     ctl_consumivel: 'Consumível', ctlh_consumivel: 'Sai e acaba (químicos, papel, água)',
     ctl_circula: 'Circula', ctlh_circula: 'Vai e volta da lavanderia (lençol, toalha)',
@@ -274,7 +274,7 @@ const I18N = {
     camErr: 'Could not open the camera. Allow access or type the code.',
     welcome: 'Stock room on your phone: take and register products by scanning the code.',
     yourName: 'Your name', teamCode: 'Team code', start: 'Start', badKey: 'Invalid team code.',
-    netErr: 'Could not reach the sheet. Try again.', by: 'Added by', upd: 'updated',
+    netErr: 'Could not reach the sheet. Try again.', by: 'Added on', upd: 'updated',
     demoBanner: 'Demo mode: data is saved on this phone only.', storageFull: 'Phone storage full — export the CSV.',
     ctl_consumivel: 'Consumable', ctlh_consumivel: 'Used up (chemicals, paper, water)',
     ctl_circula: 'Rotating', ctlh_circula: 'Goes to laundry and back (sheets, towels)',
@@ -302,7 +302,7 @@ const I18N = {
     camErr: 'No se pudo abrir la cámara. Permite el acceso o escribe el código.',
     welcome: 'Almacén en tu teléfono: retira y registra productos escaneando el código.',
     yourName: 'Tu nombre', teamCode: 'Código del equipo', start: 'Empezar', badKey: 'Código del equipo inválido.',
-    netErr: 'Sin conexión con la hoja. Intenta de nuevo.', by: 'Registrado por', upd: 'actualizado',
+    netErr: 'Sin conexión con la hoja. Intenta de nuevo.', by: 'Registrado el', upd: 'actualizado',
     demoBanner: 'Modo demostración: los datos se guardan solo en este teléfono.', storageFull: 'Memoria llena — exporta el CSV.',
     ctl_consumivel: 'Consumible', ctlh_consumivel: 'Se gasta (químicos, papel, agua)',
     ctl_circula: 'Rotativo', ctlh_circula: 'Va y vuelve de la lavandería (sábanas, toallas)',
@@ -432,7 +432,7 @@ function render() {
 }
 
 function exportCsv() {
-  const cols = ['codigo', 'nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs', 'criadoPor', 'criadoEm', 'atualizadoEm'];
+  const cols = ['codigo', 'nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs', 'criadoEm', 'atualizadoEm'];
   const cell = v => { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const csv = '﻿' + [cols.join(',')].concat(S.items.map(i => cols.map(c => cell(i[c])).join(','))).join('\n');
   const a = document.createElement('a');
@@ -555,7 +555,7 @@ function fillForm(codigo, opts) {
   $('fWhere').value = ex ? ex.local || '' : (LS.get('lastWhere', ''));
   $('fNotes').value = ex ? ex.obs || '' : '';
   $('formErr').textContent = '';
-  $('fMeta').textContent = ex ? `${t('by')} ${ex.criadoPor || '—'} · ${fmtDate(ex.criadoEm)} · ${t('upd')} ${fmtDate(ex.atualizadoEm)}` : '';
+  $('fMeta').textContent = ex ? `${t('by')} ${fmtDate(ex.criadoEm)} · ${t('upd')} ${fmtDate(ex.atualizadoEm)}` : '';
   renderCats(); renderCtl(); renderPhoto();
   $('formView').querySelector('.sheet-body').scrollTop = 0;
   if (ex) setPill(t('already'), '');
