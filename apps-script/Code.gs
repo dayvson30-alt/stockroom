@@ -8,6 +8,11 @@ const HEAD = ['codigo', 'nome', 'marca', 'categoria', 'controle', 'unidade', 'qu
   'fotoUrl', 'obs', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm'];
 const PHOTO_FOLDER = 'StockRoom - Fotos';
 const EDITABLE = ['nome', 'marca', 'categoria', 'controle', 'unidade', 'quantidade', 'local', 'obs'];
+const OUT_SHEET = 'Saidas';
+const OUT_HEAD = ['retirada', 'data', 'pessoa', 'casa', 'codigo', 'nome', 'quantidade', 'controle'];
+const MAX_LINES = 100, MAX_QTY = 999;
+const HOUSES_URL = 'https://gist.githubusercontent.com/dayvson30-alt/%ID%/raw/casas.json'; // mesma lista do Deck Report
+const HOUSES_CACHE_S = 21600;
 
 /** Rode uma vez pelo editor: cria a aba, a pasta de fotos e o código da equipe. */
 function setup() {
@@ -39,6 +44,8 @@ function handle_(p) {
       case 'list': out = { items: readAll_() }; break;
       case 'lookup': out = lookup_(String(p.code || '')); break;
       case 'save': out = { item: save_(p.item || {}, p.photo, user) }; break;
+      case 'checkout': out = { items: checkout_(p, user) }; break;
+      case 'houses': out = { houses: houses_() }; break;
       default: throw new Error('bad_action');
     }
     out.ok = true;
@@ -125,6 +132,96 @@ function save_(item, photo, user) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function outSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(OUT_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(OUT_SHEET);
+    sh.getRange(1, 1, sh.getMaxRows(), OUT_HEAD.length).setNumberFormat('@');
+    sh.getRange(1, 1, 1, OUT_HEAD.length).setValues([OUT_HEAD]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function checkLines_(lines) {
+  if (!Array.isArray(lines) || !lines.length || lines.length > MAX_LINES) throw new Error('bad_lines');
+  return lines.map(function (l) {
+    const qtd = Number(l && l.quantidade);
+    if (!Number.isInteger(qtd) || qtd < 1 || qtd > MAX_QTY) throw new Error('bad_qty');
+    return { codigo: String(l.codigo || '').trim(), quantidade: qtd };
+  });
+}
+
+/**
+ * Registra uma retirada: uma linha em Saidas por produto e baixa na quantidade.
+ * Só desconta de quem já tem contagem; o saldo pode ficar negativo (sinal de recontar).
+ * O id torna o envio repetível: se a resposta se perdeu, reenviar não duplica.
+ */
+function checkout_(p, user) {
+  const id = String(p.id || '');
+  if (!/^[\w-]{6,40}$/.test(id)) throw new Error('bad_id');
+  if (!user) throw new Error('no_user');
+  const lines = checkLines_(p.lines);
+  const casa = String(p.casa || '').trim().slice(0, 100);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = sheet_();
+    const n = sh.getLastRow();
+    const rows = n >= 2 ? sh.getRange(2, 1, n - 1, HEAD.length).getDisplayValues() : [];
+    const qCol = HEAD.indexOf('quantidade');
+    const rowOf = {};
+    rows.forEach(function (r, i) { if (r[0]) rowOf[r[0]] = i; });
+    lines.forEach(function (l) { if (rowOf[l.codigo] === undefined) throw new Error('unknown_code'); });
+    const result = function () {
+      return lines.map(function (l) { return { codigo: l.codigo, quantidade: rows[rowOf[l.codigo]][qCol] }; });
+    };
+
+    const out = outSheet_();
+    const m = out.getLastRow();
+    const seen = m >= 2 && out.getRange(2, 1, m - 1, 1).getDisplayValues().some(function (r) { return r[0] === id; });
+    if (seen) return result();
+
+    const now = new Date().toISOString();
+    const log = lines.map(function (l) {
+      const r = rows[rowOf[l.codigo]];
+      return [id, now, user, casa, l.codigo, r[HEAD.indexOf('nome')], String(l.quantidade), r[HEAD.indexOf('controle')]];
+    });
+    const rg = out.getRange(m + 1, 1, log.length, OUT_HEAD.length);
+    rg.setNumberFormat('@');
+    rg.setValues(log);
+
+    lines.forEach(function (l) {
+      const r = rows[rowOf[l.codigo]];
+      if (!/^-?\d+$/.test(String(r[qCol]).trim())) return; // sem contagem: só registra
+      r[qCol] = String(Number(r[qCol]) - l.quantidade);
+      sh.getRange(rowOf[l.codigo] + 2, qCol + 1).setValue(r[qCol]);
+    });
+    return result();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Lista de casas (l = endereço, c = condomínio). O id do gist fica em Script Properties (HOUSES_GIST). */
+function houses_() {
+  const id = PropertiesService.getScriptProperties().getProperty('HOUSES_GIST');
+  if (!id) return [];
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('houses');
+  if (hit) return JSON.parse(hit);
+
+  const res = UrlFetchApp.fetch(HOUSES_URL.replace('%ID%', encodeURIComponent(id)), { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) return [];
+  const list = (JSON.parse(res.getContentText()).addresses || [])
+    .map(function (a) { return { l: String(a.label || ''), c: String(a.comm || '') }; })
+    .filter(function (a) { return a.l; });
+  cache.put('houses', JSON.stringify(list), HOUSES_CACHE_S);
+  return list;
 }
 
 function savePhoto_(dataUrl, codigo) {

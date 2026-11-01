@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>StockRoom</title>
+<title>FF Stock</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="FF Stock">
 <style>
 :root{
   --bg:#f3f6f5;--card:#fff;--ink:#10201d;--muted:#5d6d69;--line:#dfe7e4;
@@ -25,7 +27,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
-.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);display:grid;place-items:center;flex:none}
+.logo{width:36px;height:36px;border-radius:10px;flex:none;display:block}
 .brand b{display:block;font-size:17px}
 .brand small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-r{display:flex;gap:6px;align-items:center}
@@ -57,7 +59,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .tag.warn{background:var(--warnbg);color:var(--warn)}
 .empty{text-align:center;color:var(--muted);padding:32px 12px}
 .overlay{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column}
-#scanView{background:#000;color:#fff}
+#scanView{background:#000;color:#fff;z-index:21}
 .scan-top,.sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px}
 .sheet-top{border-bottom:1px solid var(--line)}
 .x{border:0;background:rgba(127,127,127,.18);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;color:inherit;flex:none}
@@ -96,13 +98,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;transition:.2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%)}
 .banner{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+.cartbar{margin:0 16px;border:0;border-radius:12px;background:#14b8a6;color:#04211d;font-weight:700;padding:12px;cursor:pointer}
+.qty{display:flex;align-items:center;gap:6px;flex:none}
+.qty b{min-width:24px;text-align:center}
+.qty button{width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:18px;cursor:pointer}
+.hits{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hits button{width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer}
+.hits small{display:block;color:var(--muted);font-size:12px}
+.sheet-body.picking{padding-bottom:60vh} /* deixa a lista de casas subir acima do teclado */
+.cart-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg);display:grid;gap:8px;max-width:720px;width:100%;margin:0 auto}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand">
-    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 6v12M7.5 6v12M11 6v12M15 6v12M18 6v12M20.5 6v12"/></svg></div>
-    <div><b>StockRoom</b><small id="mode"></small></div>
+    <img class="logo" src="ff-logo.png" alt="Florida Fun">
+    <div><b>FF Stock</b><small id="mode"></small></div>
   </div>
   <div class="top-r">
     <select id="lang" class="chip" aria-label="Idioma"><option value="pt">PT</option><option value="en">EN</option><option value="es">ES</option></select>
@@ -113,7 +124,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 <main>
   <div id="demoBanner" class="banner hidden" data-t="demoBanner"></div>
   <section class="hero">
-    <button id="btnScan" class="big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M14 8v8M17 8v8"/></svg><span data-t="scan"></span></button>
+    <button id="btnOut" class="big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M14 8v8M17 8v8"/></svg><span id="btnOutText"></span></button>
+    <button id="btnScan" class="ghost" data-t="scan"></button>
     <button id="btnNoCode" class="ghost" data-t="nocode"></button>
   </section>
   <section class="stats" id="stats"></section>
@@ -127,6 +139,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 <div id="scanView" class="overlay hidden">
   <div class="scan-top"><b data-t="aim"></b><button class="x" data-close>✕</button></div>
   <div id="reader"></div>
+  <button id="btnSeeCart" class="cartbar hidden" type="button"></button>
   <form id="manualForm" class="manual" autocomplete="off">
     <input id="manualCode" inputmode="numeric" data-tp="typecode">
     <button type="submit">OK</button>
@@ -161,8 +174,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   </form>
 </div>
 
+<div id="cartView" class="overlay hidden">
+  <div class="sheet-top"><button class="x" data-close type="button">✕</button><b data-t="cart"></b><span style="width:40px"></span></div>
+  <div class="sheet-body">
+    <button id="btnCartScan" class="big" type="button" data-t="scanItem"></button>
+    <ul id="cartList" class="list"></ul>
+    <label><span data-t="house"></span><input id="cCasa" data-tp="houseEx" maxlength="100" autocomplete="off"></label>
+    <ul id="casaHits" class="hits hidden"></ul>
+    <p id="cartErr" class="err"></p>
+  </div>
+  <div class="cart-foot"><button id="btnFinish" class="big" type="button"></button></div>
+</div>
+
 <div id="setupView" class="overlay hidden">
-  <div class="sheet-top"><span style="width:40px"></span><b>StockRoom</b><span style="width:40px"></span></div>
+  <div class="sheet-top"><span style="width:40px"></span><b>FF Stock</b><span style="width:40px"></span></div>
   <form id="setupForm" class="sheet-body" autocomplete="off">
     <p data-t="welcome" style="margin:0"></p>
     <label><span data-t="yourName"></span><input id="sName" maxlength="60" required></label>
@@ -196,7 +221,10 @@ const UNITS = ['un', 'cx', 'fardo', 'galao', 'rolo', 'par', 'jogo', 'pacote'];
 
 const I18N = {
   pt: {
-    scan: 'Escanear código', nocode: 'Item sem código de barras', search: 'Buscar por nome, marca, código…',
+    out: 'Retirar produtos', cart: 'Retirada', scanItem: 'Escanear item', house: 'Casa (opcional)', houseEx: 'número, rua ou condomínio',
+    cartEmpty: 'Nenhum item ainda. Toque em “Escanear item”.', finish: 'Finalizar retirada', finishing: 'Enviando…', done: 'Retirada registrada ✓',
+    notReg: 'Produto não cadastrado', seeCart: 'Ver retirada', stock: 'Estoque', remove: 'Remover',
+    scan: 'Cadastrar produto', nocode: 'Item sem código de barras', search: 'Buscar por nome, marca, código…',
     aim: 'Aponte para o código de barras', typecode: 'ou digite o código', code: 'Código',
     photoAdd: '📷 Tirar foto do produto', photoChange: 'Trocar foto', name: 'Nome do produto *', brand: 'Marca',
     category: 'Categoria *', control: 'Tipo de controle', unit: 'Unidade', qty: 'Quantidade', optional: 'opcional',
@@ -205,9 +233,9 @@ const I18N = {
     editItem: 'Editar produto', already: 'Já cadastrado', looking: 'Buscando…', found: 'Achado', notFound: 'Não achado — preencha',
     internal: 'Código interno', needName: 'Preencha o nome do produto.', needCat: 'Escolha uma categoria.',
     demo: 'Modo demonstração', online: 'Online · planilha', items: 'cadastrados', withPhoto: 'com foto', noQty: 'sem contagem',
-    empty: 'Nenhum produto ainda. Toque em “Escanear código” para começar.', noMatch: 'Nada encontrado.',
+    empty: 'Nenhum produto ainda. Toque em “Cadastrar produto” para começar.', noMatch: 'Nada encontrado.',
     camErr: 'Não consegui abrir a câmera. Permita o acesso ou digite o código.',
-    welcome: 'Cadastro de produtos do estoque. Escaneie, tire a foto e salve.',
+    welcome: 'Estoque no celular: retire e cadastre produtos escaneando o código.',
     yourName: 'Seu nome', teamCode: 'Código da equipe', start: 'Começar', badKey: 'Código da equipe inválido.',
     netErr: 'Sem conexão com a planilha. Tente de novo.', by: 'Cadastrado por', upd: 'atualizado',
     demoBanner: 'Modo demonstração: os dados ficam salvos só neste celular.', storageFull: 'Memória do celular cheia — exporte o CSV.',
@@ -220,7 +248,10 @@ const I18N = {
     u_un: 'Unidade', u_cx: 'Caixa', u_fardo: 'Fardo', u_galao: 'Galão', u_rolo: 'Rolo', u_par: 'Par', u_jogo: 'Jogo', u_pacote: 'Pacote'
   },
   en: {
-    scan: 'Scan barcode', nocode: 'Item without barcode', search: 'Search name, brand, code…',
+    out: 'Take products', cart: 'Checkout', scanItem: 'Scan item', house: 'House (optional)', houseEx: 'number, street or community',
+    cartEmpty: 'No items yet. Tap “Scan item”.', finish: 'Finish checkout', finishing: 'Sending…', done: 'Checkout recorded ✓',
+    notReg: 'Product not registered', seeCart: 'View checkout', stock: 'Stock', remove: 'Remove',
+    scan: 'Register product', nocode: 'Item without barcode', search: 'Search name, brand, code…',
     aim: 'Point at the barcode', typecode: 'or type the code', code: 'Code',
     photoAdd: '📷 Take product photo', photoChange: 'Change photo', name: 'Product name *', brand: 'Brand',
     category: 'Category *', control: 'Tracking type', unit: 'Unit', qty: 'Quantity', optional: 'optional',
@@ -229,9 +260,9 @@ const I18N = {
     editItem: 'Edit product', already: 'Already registered', looking: 'Searching…', found: 'Found', notFound: 'Not found — fill in',
     internal: 'Internal code', needName: 'Enter the product name.', needCat: 'Pick a category.',
     demo: 'Demo mode', online: 'Online · sheet', items: 'registered', withPhoto: 'with photo', noQty: 'not counted',
-    empty: 'No products yet. Tap “Scan barcode” to start.', noMatch: 'Nothing found.',
+    empty: 'No products yet. Tap “Register product” to start.', noMatch: 'Nothing found.',
     camErr: 'Could not open the camera. Allow access or type the code.',
-    welcome: 'Stock room product registry. Scan, snap a photo, save.',
+    welcome: 'Stock room on your phone: take and register products by scanning the code.',
     yourName: 'Your name', teamCode: 'Team code', start: 'Start', badKey: 'Invalid team code.',
     netErr: 'Could not reach the sheet. Try again.', by: 'Added by', upd: 'updated',
     demoBanner: 'Demo mode: data is saved on this phone only.', storageFull: 'Phone storage full — export the CSV.',
@@ -244,7 +275,10 @@ const I18N = {
     u_un: 'Each', u_cx: 'Box', u_fardo: 'Case', u_galao: 'Gallon', u_rolo: 'Roll', u_par: 'Pair', u_jogo: 'Set', u_pacote: 'Pack'
   },
   es: {
-    scan: 'Escanear código', nocode: 'Artículo sin código de barras', search: 'Buscar nombre, marca, código…',
+    out: 'Retirar productos', cart: 'Retiro', scanItem: 'Escanear artículo', house: 'Casa (opcional)', houseEx: 'número, calle o condominio',
+    cartEmpty: 'Aún no hay artículos. Toca “Escanear artículo”.', finish: 'Finalizar retiro', finishing: 'Enviando…', done: 'Retiro registrado ✓',
+    notReg: 'Producto no registrado', seeCart: 'Ver retiro', stock: 'Inventario', remove: 'Quitar',
+    scan: 'Registrar producto', nocode: 'Artículo sin código de barras', search: 'Buscar nombre, marca, código…',
     aim: 'Apunta al código de barras', typecode: 'o escribe el código', code: 'Código',
     photoAdd: '📷 Tomar foto del producto', photoChange: 'Cambiar foto', name: 'Nombre del producto *', brand: 'Marca',
     category: 'Categoría *', control: 'Tipo de control', unit: 'Unidad', qty: 'Cantidad', optional: 'opcional',
@@ -253,9 +287,9 @@ const I18N = {
     editItem: 'Editar producto', already: 'Ya registrado', looking: 'Buscando…', found: 'Encontrado', notFound: 'No encontrado — completa',
     internal: 'Código interno', needName: 'Escribe el nombre del producto.', needCat: 'Elige una categoría.',
     demo: 'Modo demostración', online: 'En línea · hoja', items: 'registrados', withPhoto: 'con foto', noQty: 'sin conteo',
-    empty: 'Aún no hay productos. Toca “Escanear código” para empezar.', noMatch: 'No se encontró nada.',
+    empty: 'Aún no hay productos. Toca “Registrar producto” para empezar.', noMatch: 'No se encontró nada.',
     camErr: 'No se pudo abrir la cámara. Permite el acceso o escribe el código.',
-    welcome: 'Registro de productos del almacén. Escanea, toma la foto y guarda.',
+    welcome: 'Almacén en tu teléfono: retira y registra productos escaneando el código.',
     yourName: 'Tu nombre', teamCode: 'Código del equipo', start: 'Empezar', badKey: 'Código del equipo inválido.',
     netErr: 'Sin conexión con la hoja. Intenta de nuevo.', by: 'Registrado por', upd: 'actualizado',
     demoBanner: 'Modo demostración: los datos se guardan solo en este teléfono.', storageFull: 'Memoria llena — exporta el CSV.',
@@ -269,7 +303,7 @@ const I18N = {
   }
 };
 
-const S = { lang: LS.get('lang', 'pt'), user: LS.get('user', ''), key: LS.get('key', ''), items: [], form: null };
+const S = { lang: LS.get('lang', 'pt'), user: LS.get('user', ''), key: LS.get('key', ''), items: [], form: null, cart: LS.get('cart', null) || newCart(), cartScan: false, houses: LS.get('houses', []) };
 const t = k => (I18N[S.lang] && I18N[S.lang][k]) || I18N.pt[k] || k;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const catOf = id => CATS.find(c => c[0] === id);
@@ -295,7 +329,7 @@ function applyI18n() {
   $('who').textContent = S.user || '—';
   $('fUnit').innerHTML = UNITS.map(u => `<option value="${u}">${esc(t('u_' + u))}</option>`).join('');
   if (S.form) { $('fUnit').value = S.form.unit; renderCats(); renderCtl(); renderPhoto(); }
-  render();
+  render(); renderCart();
 }
 
 // ---------- dados ----------
@@ -332,8 +366,16 @@ async function publicLookup(code) {
 async function loadItems() {
   if (!API) { S.items = LS.get('items', []); render(); return; }
   S.items = LS.get('cache', []); render();
-  try { S.items = (await api({ action: 'list' })).items; LS.set('cache', S.items); render(); }
+  try { S.items = (await api({ action: 'list' })).items; LS.set('cache', S.items); render(); loadHouses(); }
   catch (e) { handleErr(e); }
+}
+
+// falhou ou veio vazia: fica com a última lista guardada; a casa também pode ser digitada à mão
+async function loadHouses() {
+  try {
+    const list = (await api({ action: 'houses' })).houses;
+    if (list && list.length) { S.houses = list; LS.set('houses', list); }
+  } catch (e) {}
 }
 
 function handleErr(e) {
@@ -375,6 +417,7 @@ function exportCsv() {
 
 // ---------- telas (com botão voltar do Android) ----------
 const stack = [];
+let skipPop = false; // o history.back() do ✕ não pode fechar também a tela de baixo
 function openOv(el) { el.classList.remove('hidden'); stack.push(el); history.pushState({ ov: stack.length }, ''); }
 function swapOv(from, to) { // troca de tela sem mexer no histórico
   from.classList.add('hidden'); if (from === $('scanView')) stopScanner();
@@ -383,15 +426,19 @@ function swapOv(from, to) { // troca de tela sem mexer no histórico
 function closeTop(fromPop) {
   const el = stack.pop(); if (!el) return;
   el.classList.add('hidden');
-  if (el === $('scanView')) stopScanner();
+  if (el === $('scanView')) { stopScanner(); S.cartScan = false; $('btnSeeCart').classList.add('hidden'); }
   if (el === $('formView')) S.form = null;
-  if (!fromPop) history.back();
+  if (!fromPop) { skipPop = true; history.back(); }
 }
-window.addEventListener('popstate', () => { if (stack.length) closeTop(true); });
+window.addEventListener('popstate', () => {
+  if (skipPop) { skipPop = false; return; }
+  if (stack.length) closeTop(true);
+});
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeTop(false)));
 
 // ---------- scanner ----------
-let scanner = null, last = { code: '', at: 0 };
+const SAME_ITEM_MS = 2500; // na retirada, o mesmo código parado na frente da câmera não soma de novo
+let scanner = null, last = { code: '', at: 0 }, added = { code: '', at: 0 };
 
 function normalize(code) {
   code = String(code).trim();
@@ -429,12 +476,15 @@ function onRead(text, result) {
   const now = Date.now();
   // código de barras: exige 2 leituras iguais seguidas para evitar leitura errada
   if (!isQr && !(last.code === code && now - last.at < 2000)) { last = { code, at: now }; return; }
+  if (S.cartScan && added.code === code && now - added.at < SAME_ITEM_MS) { added.at = now; return; }
+  added = { code, at: now };
   if (navigator.vibrate) navigator.vibrate(80);
   gotCode(code);
 }
 
 function gotCode(code) {
   if (!code || $('scanView').classList.contains('hidden')) return; // ignora leitura atrasada
+  if (S.cartScan) { addToCart(code); $('manualCode').value = ''; return; }
   swapOv($('scanView'), $('formView'));
   fillForm(code, {});
 }
@@ -563,6 +613,129 @@ async function save(next) {
 }
 $('itemForm').addEventListener('submit', e => { e.preventDefault(); save(true); });
 $('btnSave').addEventListener('click', () => save(false));
+
+// ---------- retirada ----------
+function newCart() { return { id: newCartId(), lines: [], casa: '' }; }
+function newCartId() { return 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+const cartCount = () => S.cart.lines.reduce((n, l) => n + l.qtd, 0);
+const isCounted = q => /^-?\d+$/.test(String(q == null ? '' : q).trim());
+
+// mudou o conteúdo = outra retirada: o id só se repete quando o reenvio é idêntico
+function cartChanged() { S.cart.id = newCartId(); LS.set('cart', S.cart); renderCart(); }
+
+function addToCart(code) {
+  const it = S.items.find(x => x.codigo === code);
+  if (!it) { toast(`${t('notReg')}: ${code}`); return; }
+  const line = S.cart.lines.find(l => l.codigo === code);
+  if (line) line.qtd++; else S.cart.lines.push({ codigo: code, qtd: 1 });
+  cartChanged();
+  toast(`+1 ${it.nome}`);
+}
+
+function renderCart() {
+  const n = cartCount();
+  $('btnOutText').textContent = n ? `${t('out')} (${n})` : t('out');
+  $('btnSeeCart').textContent = `${t('seeCart')} (${n})`;
+  $('btnFinish').textContent = n ? `${t('finish')} (${n})` : t('finish');
+  $('btnFinish').disabled = !n;
+  $('cCasa').value = S.cart.casa || '';
+  if (!S.cart.lines.length) { $('cartList').innerHTML = `<li class="empty">${esc(t('cartEmpty'))}</li>`; return; }
+  $('cartList').innerHTML = S.cart.lines.map(l => {
+    const it = S.items.find(x => x.codigo === l.codigo) || { nome: l.codigo };
+    const c = catOf(it.categoria);
+    const thumb = it.fotoUrl ? `<img src="${esc(it.fotoUrl)}" alt="" loading="lazy">` : (c ? c[1] : '📦');
+    const stock = isCounted(it.quantidade) ? `${t('stock')}: ${it.quantidade}` : t('noQty');
+    return `<li class="item" data-line="${esc(l.codigo)}"><div class="thumb">${thumb}</div><div class="t">
+      <div class="n">${esc(it.nome)}</div><div class="s">${esc(stock)}</div></div>
+      <div class="qty"><button type="button" data-d="-1" aria-label="${esc(l.qtd > 1 ? '-1' : t('remove'))}">${l.qtd > 1 ? '−' : '🗑'}</button><b>${l.qtd}</b><button type="button" data-d="1" aria-label="+1">+</button></div></li>`;
+  }).join('');
+}
+
+function demoCheckout(cart) {
+  const log = LS.get('saidas', []), now = new Date().toISOString();
+  return cart.lines.map(l => {
+    const it = S.items.find(x => x.codigo === l.codigo);
+    log.push({ retirada: cart.id, data: now, pessoa: S.user, casa: cart.casa, codigo: l.codigo, nome: it ? it.nome : '', quantidade: l.qtd });
+    LS.set('saidas', log);
+    const q = it && isCounted(it.quantidade) ? String(Number(it.quantidade) - l.qtd) : (it ? it.quantidade : '');
+    return { codigo: l.codigo, quantidade: q };
+  });
+}
+
+const MAX_HOUSE_HITS = 8, MAX_RECENT_HOUSES = 5;
+
+function rememberHouse(casa) {
+  if (!casa) return;
+  LS.set('casas', [casa].concat(LS.get('casas', []).filter(c => c !== casa)).slice(0, MAX_RECENT_HOUSES));
+}
+
+// campo vazio mostra as últimas usadas neste celular; digitando, filtra por endereço e condomínio
+function houseHits(text) {
+  const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return LS.get('casas', []).map(l => S.houses.find(h => h.l === l) || { l, c: '' });
+  return S.houses.filter(h => { const s = (h.l + ' ' + h.c).toLowerCase(); return words.every(w => s.includes(w)); }).slice(0, MAX_HOUSE_HITS);
+}
+
+function renderHouseHits() {
+  const hits = houseHits($('cCasa').value);
+  $('casaHits').innerHTML = hits.map(h => `<li><button type="button" data-house="${esc(h.l)}">${esc(h.l)}${h.c ? `<small>${esc(h.c)}</small>` : ''}</button></li>`).join('');
+  $('casaHits').classList.toggle('hidden', !hits.length);
+  $('cartView').querySelector('.sheet-body').classList.toggle('picking', !!hits.length);
+}
+
+function closeHouseHits() {
+  $('casaHits').classList.add('hidden');
+  $('cartView').querySelector('.sheet-body').classList.remove('picking');
+}
+
+async function finishCart() {
+  if (!S.cart.lines.length) return;
+  const btn = $('btnFinish');
+  btn.disabled = true; btn.textContent = t('finishing'); $('cartErr').textContent = '';
+  try {
+    const updated = API
+      ? (await api({ action: 'checkout', id: S.cart.id, casa: S.cart.casa, lines: S.cart.lines.map(l => ({ codigo: l.codigo, quantidade: l.qtd })) })).items
+      : demoCheckout(S.cart);
+    updated.forEach(u => { const it = S.items.find(x => x.codigo === u.codigo); if (it) it.quantidade = u.quantidade; });
+    LS.set(API ? 'cache' : 'items', S.items);
+    rememberHouse(S.cart.casa);
+    S.cart = newCart(); LS.set('cart', S.cart);
+    render(); renderCart();
+    closeTop(false);
+    toast(t('done'));
+  } catch (e) {
+    const m = String(e.message);
+    if (m === 'bad_key') handleErr(e);
+    else $('cartErr').textContent = m === 'unknown_code' ? t('notReg') : t('netErr');
+    renderCart();
+  }
+}
+
+$('btnOut').addEventListener('click', () => { $('cartErr').textContent = ''; renderCart(); openOv($('cartView')); });
+$('btnCartScan').addEventListener('click', () => {
+  S.cartScan = true; added = { code: '', at: 0 };
+  $('btnSeeCart').classList.remove('hidden');
+  openOv($('scanView')); startScanner();
+});
+$('btnSeeCart').addEventListener('click', () => closeTop(false));
+$('btnFinish').addEventListener('click', finishCart);
+$('cCasa').addEventListener('input', e => { S.cart.casa = e.target.value.trim(); LS.set('cart', S.cart); renderHouseHits(); });
+$('cCasa').addEventListener('focus', () => { renderHouseHits(); $('cCasa').scrollIntoView({ block: 'start' }); });
+$('cCasa').addEventListener('blur', closeHouseHits);
+$('casaHits').addEventListener('mousedown', e => e.preventDefault()); // tocar na lista não pode tirar o foco antes do clique
+$('casaHits').addEventListener('click', e => {
+  const b = e.target.closest('[data-house]'); if (!b) return;
+  S.cart.casa = b.dataset.house; $('cCasa').value = S.cart.casa; LS.set('cart', S.cart);
+  $('cCasa').blur();
+});
+$('cartList').addEventListener('click', e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  const code = b.closest('[data-line]').dataset.line;
+  const line = S.cart.lines.find(l => l.codigo === code); if (!line) return;
+  line.qtd = Math.min(999, line.qtd + Number(b.dataset.d));
+  if (line.qtd < 1) S.cart.lines = S.cart.lines.filter(l => l !== line);
+  cartChanged();
+});
 
 // ---------- setup ----------
 function openSetup(err) {
